@@ -8,6 +8,7 @@ export interface MainMenuActions {
   onRanking(): void;
   onInvite(): void;
   onSettings(): void;
+  onAccount(): void;
 }
 
 /**
@@ -22,7 +23,10 @@ export class MainMenuScreen {
       <section class="screen screen--menu">
         <header class="menu__top">
           <div class="chip chip--coins"><span class="coin-icon"></span><span data-ref="coins">0</span></div>
-          <button class="icon-btn" data-action="settings" aria-label="${t('menu.settings')}">⚙️</button>
+          <div class="menu__top-right">
+            <button class="chip chip--account" data-action="account">👤 <span data-ref="account"></span></button>
+            <button class="icon-btn" data-action="settings" aria-label="${t('menu.settings')}">⚙️</button>
+          </div>
         </header>
 
         <h1 class="logo">dino<span>Mau</span></h1>
@@ -47,10 +51,17 @@ export class MainMenuScreen {
       ranking: actions.onRanking,
       invite: actions.onInvite,
       settings: actions.onSettings,
+      account: actions.onAccount,
     };
     this.el.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((b) =>
       b.addEventListener('click', () => map[b.dataset.action!]?.()),
     );
+  }
+
+  /** Etiqueta del botón de cuenta: nombre, "Invitado · Entrar" o "Sin conexión". */
+  setAccount(label: string, enabled: boolean): void {
+    $(this.el, '[data-ref="account"]').textContent = label;
+    $<HTMLButtonElement>(this.el, '[data-action="account"]').disabled = !enabled;
   }
 
   update(state: { coins: number; best: number; equipped: DinoId }): void {

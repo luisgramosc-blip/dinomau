@@ -553,6 +553,7 @@ export class RunnerScene implements Updatable, Renderable {
       score: this.score.score,
       coins: this.score.coins,
       durationMs: Math.round(this.score.elapsed * 1000),
+      coinsCollected: this.collectedForBattles,
       battles: [...this.battles],
     });
   }

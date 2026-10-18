@@ -8,7 +8,8 @@ import { events } from '@/core/EventBus';
  * operaciones son asíncronas y devuelven un resultado explícito, así la UI no
  * cambia cuando las compras pasen a validarse en una Edge Function.
  */
-export type EconomyError = 'INSUFFICIENT_COINS' | 'ALREADY_OWNED' | 'NOT_OWNED' | 'DINO_NOT_FOUND' | 'NETWORK';
+export type EconomyError =
+  | 'INSUFFICIENT_COINS' | 'ALREADY_OWNED' | 'NOT_OWNED' | 'DINO_NOT_FOUND' | 'NETWORK' | 'AUTH_REQUIRED';
 
 export type EconomyResult = { ok: true; coins: number } | { ok: false; error: EconomyError };
 
@@ -19,11 +20,20 @@ export interface WalletSnapshot {
 }
 
 export interface EconomyService {
+  /** 'local' = monedero en el dispositivo (sin backend); 'server' = Supabase. */
+  readonly mode: 'local' | 'server';
   readonly snapshot: WalletSnapshot;
   purchase(id: DinoId): Promise<EconomyResult>;
   equip(id: DinoId): Promise<EconomyResult>;
-  /** Acredita las monedas de una partida terminada. */
+  /**
+   * Acredita las monedas de una partida terminada. Solo en modo local: con
+   * servidor las acredita `finish-run` y aquí se usa `setCoins`.
+   */
   creditRun(coins: number): Promise<EconomyResult>;
+  /** Fija el saldo devuelto por el servidor. */
+  setCoins(coins: number): void;
+  /** Vuelve a leer el monedero (tras iniciar sesión, por ejemplo). */
+  refresh(): Promise<void>;
 }
 
 /** Estado de un dino en la tienda. */
@@ -53,6 +63,7 @@ const VALID_IDS = new Set<string>(DINOS.map((d) => d.id));
  * cuenta para comprar y valida todo en el servidor.
  */
 export class LocalEconomyService implements EconomyService {
+  readonly mode = 'local' as const;
   private wallet: { coins: number; owned: Set<DinoId>; equipped: DinoId };
 
   constructor(private readonly storage: Pick<Storage, 'getItem' | 'setItem'> | null = safeLocalStorage()) {
@@ -81,6 +92,16 @@ export class LocalEconomyService implements EconomyService {
     this.save();
     events.emit('dino:equipped', { id });
     return { ok: true, coins: this.wallet.coins };
+  }
+
+  setCoins(coins: number): void {
+    this.wallet.coins = Math.max(0, Math.floor(coins));
+    this.save();
+    events.emit('wallet:changed', { coins: this.wallet.coins });
+  }
+
+  async refresh(): Promise<void> {
+    /* nada que refrescar: todo está en memoria */
   }
 
   async creditRun(coins: number): Promise<EconomyResult> {

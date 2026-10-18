@@ -7,7 +7,9 @@ Endless runner 3D ambientado en la era jurásica. Corre por la selva, esquiva tr
 - **Backend:** Supabase (Auth, Postgres con RLS, Edge Functions)
 - **Despliegue:** Vercel (frontend) + Supabase (backend)
 
-> Estado: **Fase 4 completada**. Ya funcionan el runner completo, la tienda con 9 dinosaurios y habilidades, y las batallas contra rivales. El monedero se guarda **por ahora solo en el dispositivo** (modo de prueba); en la Fase 5 pasa a Supabase con validación en el servidor.
+> Estado: **Fase 5 completada**. Ya funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas y el ranking global y semanal.
+>
+> **Dos modos.** Con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` definidas, todo va al servidor. Sin ellas el juego funciona entero en *modo local* (monedero en el dispositivo), útil para desarrollar sin backend.
 
 ## Obstáculos y power-ups
 
@@ -221,7 +223,7 @@ dinoMau/
 │       ├── start-run/                # Abre una partida y devuelve la semilla
 │       ├── finish-run/               # Valida plausibilidad, aplica batallas, acredita monedas
 │       ├── purchase-dino/            # Compra con verificación de saldo
-│       └── claim-referral/           # Bono de bienvenida (email verificado, una sola vez)
+│       └── claim-referral/           # (Fase 6) Bono de bienvenida (email verificado, una sola vez)
 │
 └── tests/
     ├── unit/                      # Vitest: pool, carriles, resolver de batalla, validación
@@ -358,7 +360,26 @@ Para probar en el móvil dentro de la misma red: `npm run dev -- --host` y abre 
 | `npm test` | Pruebas unitarias (Vitest) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run balance` | Tabla de balance de batallas |
-| `npm run db:types` | *(Fase 5)* Genera `src/types/database.ts` desde Supabase |
+| `npm run test:db` | Pruebas de integración del servidor contra un Postgres temporal (sin Docker; necesita PostgreSQL ≥ 15 instalado) |
+| `npm run check:functions` | Comprueba los tipos de las Edge Functions con Deno |
+
+---
+
+## Cómo funciona el servidor (Fase 5)
+
+| Qué | Dónde | Notas |
+|---|---|---|
+| Cuentas | Supabase Auth | Email con confirmación por correo y Google. Los invitados juegan, pero no guardan monedas, no compran y no salen en el ranking. |
+| Perfil, saldo y dinos | `profiles`, `user_dinos` | El cliente solo **lee** sus filas (RLS). Desde el cliente solo se pueden cambiar `username` y el dino equipado, y la base de datos comprueba que el dino sea suyo. |
+| Abrir partida | Edge Function `start-run` | Devuelve `runId` y la **semilla** del recorrido, generada en el servidor. |
+| Cerrar partida | Edge Function `finish-run` | Valida tiempo real frente a tiempo de juego, distancia posible según la curva de velocidad, monedas por metro y por segundo, puntaje y la cadena de batallas. **Recalcula** el efecto de cada batalla y acredita lo que calcula el servidor, nunca el total que dice el cliente. Si algo no cuadra, la partida queda `rejected` con su motivo. |
+| Compras | Edge Function `purchase-dino` | Saldo y precio comprobados en una transacción. Cada movimiento queda en `coin_ledger`. |
+| Ranking | `get_leaderboard('all' \| 'weekly')`, `get_my_rank` | Solo expone nombre, dino y puntaje. |
+
+La lógica de las Edge Functions vive en `supabase/functions/_shared/handlers.ts` y `validation.ts`, sin dependencias de Deno, así se prueba con Vitest:
+- `tests/unit/Validation.test.ts`: reglas antitrampas.
+- `tests/integration/server.test.ts`: flujos completos contra Postgres real con las migraciones aplicadas.
+- `tests/unit/ConfigSync.test.ts`: falla si los precios o las reglas del cliente dejan de coincidir con los del SQL.
 
 ---
 
@@ -374,14 +395,13 @@ supabase db push                                  # aplica migraciones
 supabase functions deploy start-run
 supabase functions deploy finish-run
 supabase functions deploy purchase-dino
-supabase functions deploy claim-referral
 ```
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` se inyectan solas en las Edge Functions. No hace falta definirlas como secretos.
 
 **Auth** (Dashboard → Authentication):
 
-1. *Sign In / Providers → Email*: activa **Confirm email**, necesario para el antifraude de referidos.
+1. *Sign In / Providers → Email*: activa **Confirm email**. Es necesario para el antifraude de referidos y evita cuentas con correos falsos.
 2. *Providers → Google*: crea un OAuth Client en Google Cloud Console y pega el Client ID y el Secret. URI de redirección autorizada: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`.
 3. *URL Configuration*:
    - Site URL: `https://<tu-dominio>`
@@ -428,7 +448,7 @@ Desde el primer día el juego funciona con mallas generadas por código (`src/as
 | 2 | Power-ups, dificultad progresiva, HUD, pausa, fin de partida | ✅ |
 | 3 | Tienda 3D y sistema de dinosaurios y habilidades | ✅ |
 | 4 | Sistema de batallas (QTE) | ✅ |
-| 5 | Supabase: cuentas, guardado en servidor, ranking | ⏳ |
-| 6 | Referidos y bonos | |
+| 5 | Supabase: cuentas, guardado en servidor, ranking | ✅ |
+| 6 | Referidos y bonos | ⏳ |
 | 7 | Imagen para historias y compartir | |
 | 8 | PWA, optimización y pruebas en móvil | |

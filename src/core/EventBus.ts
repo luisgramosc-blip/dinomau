@@ -14,7 +14,12 @@ export interface GameEvents {
   'run:resume': void;
   /** Cuenta regresiva antes de reanudar (3, 2, 1, 0 = ¡ya!). */
   'run:countdown': { value: number };
-  'run:over': { distance: number; score: number; coins: number; durationMs: number; battles: BattleResult[] };
+  'run:over': {
+    distance: number; score: number; coins: number; durationMs: number;
+    /** Monedas recogidas en pista (sin efectos de batalla): lo que valida el servidor. */
+    coinsCollected: number;
+    battles: BattleResult[];
+  };
   /** Las monedas de la partida cambiaron por algo distinto a recogerlas (batallas). */
   'run:coins': { total: number; delta: number };
   'score:update': { distance: number; score: number; speed: number };
@@ -34,6 +39,10 @@ export interface GameEvents {
   'wallet:changed': { coins: number };
   /** Se equipó otro dino. */
   'dino:equipped': { id: DinoId };
+  /** Cambió la sesión (null = invitado). */
+  'auth:changed': { userId: string | null; email: string | null };
+  /** Se leyó o cambió el perfil del servidor. */
+  'profile:changed': { username: string | null };
 
   // --- Batallas ---
   /** El runner alcanzó el umbral de monedas: hay que lanzar una batalla. */

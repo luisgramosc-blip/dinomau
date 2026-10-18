@@ -23,7 +23,7 @@ export class ShopScreen {
   private readonly confirm: HTMLElement;
   private pendingBuy?: DinoDefinition;
 
-  constructor(private readonly actions: ShopActions) {
+  constructor(private readonly actions: ShopActions, localMode: boolean) {
     this.el = html(/* html */ `
       <section class="screen screen--shop hidden">
         <header class="shop__top">
@@ -48,7 +48,7 @@ export class ShopScreen {
           </div>
           <button class="btn btn--primary shop__action" data-action="primary"></button>
           <p class="shop__hint" data-ref="hint"></p>
-          <p class="shop__note">${t('shop.localNote')}</p>
+          ${localMode ? `<p class="shop__note">${t('shop.localNote')}</p>` : ''}
         </div>
 
         <div class="screen screen--modal shop__confirm hidden" data-ref="confirm">

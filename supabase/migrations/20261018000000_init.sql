@@ -56,10 +56,17 @@ insert into public.game_config (key, value) values
   ('anticheat', '{
      "maxCoinsPerSecond": 20,
      "maxCoinsPerMeter": 1.0,
-     "maxSpeedMps": 45,
+     "speedStart": 13,
+     "speedMax": 32,
+     "speedRampTime": 150,
+     "sprintBonusMeters": 150,
+     "distanceTolerance": 0.03,
+     "maxScorePerMeter": 1.25,
+     "clockToleranceMs": 5000,
      "minRunDurationMs": 3000,
      "maxRunDurationMs": 7200000,
-     "runExpiryMinutes": 180
+     "runExpiryMinutes": 180,
+     "maxBattlesPerRun": 60
    }');
 
 -- -----------------------------------------------------------------------------
@@ -479,15 +486,16 @@ create policy "own battles read"   on public.battles     for select to authentic
 create policy "own referrals read" on public.referrals   for select to authenticated
   using (inviter_id = auth.uid() or invitee_id = auth.uid());
 
--- Lectura explícita (RLS filtra las filas)
+-- Supabase concede por defecto TODO a anon/authenticated sobre objetos nuevos.
+-- Se revoca y se concede solo lo imprescindible (RLS filtra además las filas).
+revoke all on all tables in schema public from anon, authenticated;
+revoke all on all sequences in schema public from anon, authenticated;
 grant usage on schema public to anon, authenticated;
 grant select on public.game_config, public.dinos to anon, authenticated;
 grant select on public.profiles, public.user_dinos, public.coin_ledger,
                 public.runs, public.battles, public.referrals to authenticated;
-revoke insert, delete on all tables in schema public from anon, authenticated;
 
 -- El cliente solo puede modificar estas columnas de su perfil
-revoke update on public.profiles from anon, authenticated;
 grant update (username, avatar_url, language, equipped_dino_id) on public.profiles to authenticated;
 
 -- No hay políticas de INSERT/DELETE para clientes: solo service_role escribe.

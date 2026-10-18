@@ -851,3 +851,122 @@ body.ready .splash { opacity: 0; pointer-events: none; }
 .battle__coins { margin: 0 0 4px; font-size: 20px; color: var(--coin); }
 .battle__outro small { display: block; min-height: 1em; margin-bottom: 14px; font: 800 12px var(--font-body); opacity: 0.8; }
 .battle__outro .btn:disabled { opacity: 0.5; }
+
+/* --- Cuenta, perfil y ranking ------------------------------------------------- */
+.menu__top-right { display: flex; align-items: center; gap: 8px; }
+.chip--account {
+  border: none;
+  color: var(--sand);
+  font-size: 15px;
+  cursor: pointer;
+  max-width: 46vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip--account:disabled { cursor: default; opacity: 0.7; }
+
+.auth, .profile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+.auth h2, .profile h2 { margin-bottom: 0; text-align: center; }
+.auth__reason { margin: 0; font-size: 14px; text-align: center; opacity: 0.9; }
+.auth__reason.hidden { display: none; }
+.auth__or {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+.auth__or::before, .auth__or::after { content: ''; flex: 1; height: 1px; background: rgba(246, 227, 192, 0.3); }
+.auth__msg { margin: 0; min-height: 1.2em; font-size: 14px; color: var(--jungle-light); }
+.auth__msg:empty { display: none; }
+.auth__msg--error { color: #ff8a7a; }
+.is-busy .auth, .is-busy .btn { opacity: 0.7; pointer-events: none; }
+
+.field { display: flex; flex-direction: column; gap: 4px; font-weight: 800; font-size: 14px; }
+.field input {
+  font: 600 16px var(--font-body); /* 16px evita el zoom automático de iOS */
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(246, 227, 192, 0.3);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.field input:focus { outline: none; border-color: var(--jungle-light); }
+.field small { font-weight: 600; font-size: 12px; opacity: 0.7; }
+
+.btn--google {
+  width: 100%;
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.g-logo {
+  font: 800 18px var(--font-body);
+  color: #4285f4;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--lava-light);
+  font: 800 14px var(--font-body);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+.link.hidden { display: none; }
+
+.profile__email { margin: 0; text-align: center; font-size: 13px; opacity: 0.75; }
+.profile .stats { margin: 6px 0 0; }
+
+.save-status { margin: -6px 0 12px; font-size: 14px; font-weight: 800; }
+.save-status:empty { display: none; }
+.save-status[data-kind='ok'] { color: var(--jungle-light); }
+.save-status[data-kind='warn'] { color: var(--lava-light); }
+.card--gameover .btn--google { margin: -4px 0 12px; }
+
+.screen--ranking { justify-content: flex-start; gap: 12px; }
+.ranking { width: min(420px, 100%); padding: 14px; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.ranking .segmented { margin-bottom: 10px; }
+.ranking__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ranking__row {
+  display: grid;
+  grid-template-columns: 44px 1fr 28px auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+.ranking__row--me { background: rgba(124, 194, 66, 0.25); outline: 2px solid var(--jungle-light); }
+.ranking__pos { font-family: var(--font-display); font-size: 18px; text-align: center; }
+.ranking__name { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking__row b { font-family: var(--font-display); font-weight: 400; color: var(--coin); font-size: 18px; }
+.ranking__empty { padding: 24px 8px; opacity: 0.8; }
+.ranking__me { margin: 10px 0 0; font-weight: 800; font-size: 14px; color: var(--lava-light); }
+.ranking__me:empty { display: none; }

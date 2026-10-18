@@ -1,0 +1,1 @@
+-- Datos de desarrollo local (vacío: el catálogo de dinos va en las migraciones).
