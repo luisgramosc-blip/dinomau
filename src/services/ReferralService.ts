@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PENDING_REFERRAL_KEY } from '@/config/referral.config';
 import type { AuthService } from './AuthService';
-import { BackendError, callFunction, SITE_URL } from './supabaseClient';
+import { BackendError, referralLink } from './env';
+import { callFunction } from './supabaseClient';
 
 export type ClaimOutcome =
   | { status: 'granted'; bonus: number; coins: number }
@@ -24,7 +25,7 @@ export class ReferralService {
   ) {}
 
   static linkFor(code: string): string {
-    return `${SITE_URL.replace(/\/$/, '')}/r/${code}`;
+    return referralLink(code);
   }
 
   /**

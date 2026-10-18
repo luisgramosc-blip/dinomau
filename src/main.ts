@@ -1,3 +1,7 @@
+// Fuentes empaquetadas con el juego (funcionan sin conexión): solo alfabeto latino
+import '@fontsource/lilita-one/latin-400.css';
+import '@fontsource/nunito/latin-600.css';
+import '@fontsource/nunito/latin-800.css';
 import './ui/styles/main.css';
 import { DINOS, getDino } from './config/dinos.config';
 import { PENDING_REFERRAL_KEY } from './config/referral.config';
@@ -12,17 +16,16 @@ import { SeededRandom } from './core/SeededRandom';
 import { Renderer } from './engine/Renderer';
 import { InputManager } from './input/InputManager';
 import { RunnerScene } from './runner/RunnerScene';
-import { AuthService } from './services/AuthService';
 import { LocalEconomyService, type EconomyService } from './services/EconomyService';
-import { LeaderboardService } from './services/LeaderboardService';
-import { ReferralService } from './services/ReferralService';
-import { SITE_URL } from './services/supabaseClient';
-import { RunService } from './services/RunService';
-import { SupabaseEconomyService } from './services/SupabaseEconomyService';
-import { supabase } from './services/supabaseClient';
+import { isBackendConfigured, referralLink, SITE_URL } from './services/env';
+import { localRunTracker } from './services/RunTracker';
 import { ShopScene } from './shop/ShopScene';
 import { LocalStore } from './storage/LocalStore';
+import { PwaService } from './pwa/PwaService';
+import { QualityManager } from './engine/QualityManager';
+import { allowScreenOff, keepScreenOn } from './utils/wakeLock';
 import { UIManager } from './ui/UIManager';
+import { PHONE_LANDSCAPE_QUERY } from './ui/components/RotateNotice';
 import { setLanguage, t } from './i18n/i18n';
 
 /** Tiempo mínimo del splash para que el logo no "parpadee" en equipos rápidos. */
@@ -59,29 +62,29 @@ async function bootstrap(): Promise<void> {
   const splashStart = performance.now();
   setLanguage(LocalStore.settings.language);
   captureReferralLink();
+  const pwa = new PwaService();
+  pwa.register();
 
   const container = document.getElementById('game')!;
   const uiRoot = document.getElementById('ui')!;
   const splashBar = document.querySelector<HTMLElement>('.splash__bar > span');
 
+  // --- Servicios: servidor (Supabase, carga diferida) o local -----------------
+  // Se empieza a descargar ya, en paralelo con los modelos
+  const backendPromise = isBackendConfigured
+    ? import('./services/backend').then((m) => m.createBackend())
+    : Promise.resolve(null);
+
   const assets = new AssetLoader();
   await assets.preload((ratio) => splashBar && (splashBar.style.transform = `scaleX(${ratio})`));
 
-  // --- Servicios: servidor (Supabase) o local --------------------------------
-  const auth = supabase ? new AuthService(supabase) : null;
-  const serverEconomy = supabase && auth ? new SupabaseEconomyService(supabase, auth) : null;
-  const leaderboard = supabase ? new LeaderboardService(supabase) : null;
-  const referrals = supabase && auth ? new ReferralService(supabase, auth) : null;
+  const backend = await backendPromise;
+  const auth = backend?.auth ?? null;
+  const serverEconomy = backend?.serverEconomy ?? null;
+  const leaderboard = backend?.leaderboard ?? null;
+  const referrals = backend?.referrals ?? null;
+  const runs = backend?.runs ?? localRunTracker;
   const economy: EconomyService = serverEconomy ?? new LocalEconomyService();
-  const runs = new RunService(auth);
-  if (auth && serverEconomy) {
-    try {
-      await auth.init();
-      await serverEconomy.refresh();
-    } catch (err) {
-      console.warn('[backend] sin conexión al iniciar', err);
-    }
-  }
   /** Victorias en batallas de la partida en curso (el perfil se actualiza al terminarla). */
   let battlesWonThisRun = 0;
   const battlesWon = () =>
@@ -120,7 +123,7 @@ async function bootstrap(): Promise<void> {
   /** Link para compartir: el de referido si hay cuenta con código, si no la web del juego. */
   const shareLink = () => {
     const code = auth?.user ? serverEconomy?.profile?.referralCode : null;
-    return code ? { url: ReferralService.linkFor(code), isReferral: true } : { url: SITE_URL, isReferral: false };
+    return code ? { url: referralLink(code), isReferral: true } : { url: SITE_URL, isReferral: false };
   };
 
   const ui = new UIManager(uiRoot, economy, { auth, serverEconomy, leaderboard, referrals }, {
@@ -130,6 +133,7 @@ async function bootstrap(): Promise<void> {
     onMenu: () => {
       // Salir a mitad de partida la abandona (no se guarda)
       if (runner.runState !== 'gameover') runs.discard();
+      allowScreenOff();
       runner.backToReady();
       scenes.set(runner);
       ui.showMenu();
@@ -165,7 +169,7 @@ async function bootstrap(): Promise<void> {
       if (result.ok) ui.toast.show(`✅ ${t('shop.equippedToast', { name: dino.name })}`);
       else if (result.error === 'AUTH_REQUIRED') ui.openAuth('buy');
     },
-  }, { assets, getLink: shareLink });
+  }, { assets, getLink: shareLink }, pwa);
 
   // Batallas: el runner avisa al llegar al umbral de monedas
   events.on('battle:trigger', ({ runCoins, sequence, atMs }) => {
@@ -275,9 +279,29 @@ async function bootstrap(): Promise<void> {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) runner.pause();
   });
+  // Y al girar el móvil a horizontal (se muestra el aviso "gira tu teléfono")
+  matchMedia(PHONE_LANDSCAPE_QUERY).addEventListener('change', (e) => {
+    if (e.matches) runner.pause();
+  });
 
-  const game = new Game(scenes, scenes);
+  // Calidad adaptativa: mide los FPS solo durante la partida
+  const quality = new QualityManager(renderer);
+  const game: Game = new Game(
+    {
+      update: (dt) => {
+        quality.update(dt, game.fps, runner.runState === 'running' && scenes.is(runner));
+        scenes.update(dt);
+      },
+    },
+    scenes,
+  );
   game.start();
+
+  // Pantalla siempre encendida mientras se juega
+  events.on('run:start', () => void keepScreenOn());
+  events.on('run:countdown', () => void keepScreenOn());
+  events.on('run:pause', allowScreenOff);
+  events.on('run:over', allowScreenOff);
 
   // Fuera splash
   const wait = Math.max(0, MIN_SPLASH_MS - (performance.now() - splashStart));
@@ -287,7 +311,7 @@ async function bootstrap(): Promise<void> {
   }, wait);
 
   // Acceso para depurar desde la consola en desarrollo
-  if (import.meta.env.DEV) Object.assign(window, { dinoMau: { game, runner, shop, battle, renderer, audio, economy, ui, auth, runs } });
+  if (import.meta.env.DEV) Object.assign(window, { dinoMau: { game, runner, shop, battle, renderer, audio, economy, ui, auth, runs, quality, pwa } });
 }
 
 bootstrap().catch((err) => {

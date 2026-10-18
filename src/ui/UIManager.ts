@@ -5,10 +5,11 @@ import type { AuthService } from '@/services/AuthService';
 import type { EconomyService } from '@/services/EconomyService';
 import type { LeaderboardService } from '@/services/LeaderboardService';
 import type { ReferralService } from '@/services/ReferralService';
-import type { FinishResult } from '@/services/RunService';
+import type { FinishResult } from '@/services/RunTracker';
 import type { SupabaseEconomyService } from '@/services/SupabaseEconomyService';
 import { LocalStore } from '@/storage/LocalStore';
 import { Toast } from './components/Toast';
+import { createRotateNotice } from './components/RotateNotice';
 import { hide, show, stopSwipe } from './dom';
 import { AuthScreen, type AuthReason } from './screens/AuthScreen';
 import { BattleScreen } from './screens/BattleScreen';
@@ -16,6 +17,8 @@ import { Countdown } from './screens/Countdown';
 import { GameOverScreen } from './screens/GameOverScreen';
 import { Hud } from './screens/Hud';
 import { InviteScreen } from './screens/InviteScreen';
+import { IosInstallSheet } from './screens/IosInstallSheet';
+import type { PwaService } from '@/pwa/PwaService';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { MainMenuScreen } from './screens/MainMenuScreen';
 import { PauseScreen } from './screens/PauseScreen';
@@ -63,6 +66,7 @@ export class UIManager {
   private readonly ranking: LeaderboardScreen;
   private readonly invite: InviteScreen;
   readonly share: ShareSheet;
+  private readonly iosInstall: IosInstallSheet;
   /** Última partida, para la imagen de compartir. */
   private lastRun?: ShareRun;
   private readonly authScreen?: AuthScreen;
@@ -74,6 +78,7 @@ export class UIManager {
     private readonly backend: BackendServices,
     actions: UIActions,
     shareDeps: Omit<ShareDeps, 'toast'>,
+    private readonly pwa: PwaService,
   ) {
     root.innerHTML = '';
     const { auth, serverEconomy, leaderboard, referrals } = backend;
@@ -85,7 +90,10 @@ export class UIManager {
       onInvite: () => this.showInvite(),
       onSettings: () => this.settings.open(),
       onAccount: () => this.openAccount(),
+      onInstall: () => void this.install(),
+      onUpdate: () => void this.pwa.applyUpdate(),
     });
+    this.iosInstall = new IosInstallSheet();
     this.shop = new ShopScreen({
       onBack: actions.onCloseShop,
       onSelect: actions.onShopSelect,
@@ -125,10 +133,11 @@ export class UIManager {
     const countdown = new Countdown();
     root.append(
       this.menu.el, this.shop.el, this.ranking.el, this.invite.el, this.hud.el, this.battle.el, countdown.el,
-      this.pause.el, this.gameOver.el, this.share.el, this.settings.el,
+      this.pause.el, this.gameOver.el, this.share.el, this.settings.el, this.iosInstall.el,
       ...(this.authScreen ? [this.authScreen.el] : []),
       ...(this.profile ? [this.profile.el] : []),
       this.toast.el,
+      createRotateNotice(),
     );
     stopSwipe(root);
     this.refreshMenu();
@@ -165,10 +174,30 @@ export class UIManager {
       this.refreshAccount();
       this.refreshMenu();
     });
+    // PWA: botón de instalar y aviso de versión nueva (solo en el menú, nunca en partida)
+    const syncPwa = () => {
+      this.menu.setInstallVisible(this.pwa.installMode !== 'none');
+      this.menu.setUpdateVisible(this.pwa.needsUpdate);
+    };
+    let offlineAnnounced = false;
+    pwa.onChange(() => {
+      syncPwa();
+      if (pwa.offlineReady && !offlineAnnounced) {
+        offlineAnnounced = true;
+        this.toast.show(t('pwa.offlineReady'));
+      }
+    });
+    syncPwa();
+
     auth?.onChange((user) => {
       this.refreshAccount();
       if (!user) this.profile?.close();
     });
+  }
+
+  private async install(): Promise<void> {
+    if (this.pwa.installMode === 'ios') return this.iosInstall.open();
+    if (await this.pwa.promptInstall()) this.toast.show(t('pwa.installed'));
   }
 
   /** Récord: el del servidor con sesión; el local como invitado. */

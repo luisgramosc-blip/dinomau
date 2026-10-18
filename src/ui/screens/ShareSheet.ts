@@ -2,9 +2,7 @@ import type { AssetLoader } from '@/assets/AssetLoader';
 import type { DinoDefinition } from '@/config/dinos.config';
 import { REFERRAL_CONFIG } from '@/config/referral.config';
 import { formatNumber, t } from '@/i18n/i18n';
-import { renderDinoPortrait } from '@/share/DinoPortrait';
 import { browserShareEnv, canShareImage, copyText, shareStory, socialLinks, STORY_FILENAME, type ShareEnv } from '@/share/ShareService';
-import { renderStoryBlob } from '@/share/StoryImage';
 import { $, hide, html, show } from '../dom';
 
 export interface ShareRun {
@@ -86,6 +84,11 @@ export class ShareSheet {
     });
 
     try {
+      // El generador se descarga la primera vez que alguien comparte
+      const [{ renderDinoPortrait }, { renderStoryBlob }] = await Promise.all([
+        import('@/share/DinoPortrait'),
+        import('@/share/StoryImage'),
+      ]);
       const portrait = renderDinoPortrait(this.deps.assets, run.dino);
       const blob = await renderStoryBlob({
         ...run,

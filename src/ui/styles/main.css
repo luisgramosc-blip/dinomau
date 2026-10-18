@@ -29,6 +29,8 @@ html, body {
   color: var(--sand);
   font-family: var(--font-body);
   -webkit-tap-highlight-color: transparent;
+  /* Sin zoom por doble toque en botones; el canvas ya usa touch-action: none */
+  touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   overscroll-behavior: none;
@@ -1023,3 +1025,61 @@ body.ready .splash { opacity: 0; pointer-events: none; }
 .btn--facebook { background: #1877f2; color: #fff; }
 .btn--x { background: #000; color: #fff; }
 .share .btn:disabled { opacity: 0.5; }
+
+/* --- PWA ---------------------------------------------------------------------- */
+.chip--install {
+  border: 2px solid var(--ink);
+  background: var(--lava-light);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 16px;
+}
+.update-banner {
+  width: min(320px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 2px solid var(--jungle-light);
+  border-radius: 14px;
+  padding: 8px 10px;
+  font-weight: 800;
+  font-size: 13px;
+  text-align: left;
+}
+.update-banner .btn { width: auto; min-height: 38px; padding: 6px 12px; font-size: 16px; }
+.ios-steps { margin: 0 0 18px; line-height: 1.5; }
+.ios-share {
+  display: inline-block;
+  padding: 0 6px;
+  border: 2px solid var(--sand);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* --- Aviso "gira tu teléfono" (misma condición que PHONE_LANDSCAPE_QUERY) ---- */
+.rotate-notice { display: none; }
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  .rotate-notice {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(var(--jungle, #2e6a1e), #1d4512);
+    color: var(--sand);
+    font-family: var(--font-display);
+    text-align: center;
+    padding: 16px;
+  }
+  .rotate-notice h2 { margin: 0; font-size: 30px; }
+  .rotate-notice p { margin: 0; font-family: var(--font-body, inherit); font-size: 16px; }
+  .rotate-notice__phone { font-size: 56px; animation: rotate-hint 1.8s ease-in-out infinite; }
+}
+@keyframes rotate-hint {
+  0%, 30% { transform: rotate(-90deg); }
+  60%, 100% { transform: rotate(0deg); }
+}

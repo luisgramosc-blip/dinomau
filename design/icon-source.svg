@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Icono de la app (fuente). Los PNG de public/icons se generan a partir de este archivo. -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#7cc242"/>
+      <stop offset="1" stop-color="#2e6a1e"/>
+    </radialGradient>
+    <linearGradient id="lava" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffb13b"/>
+      <stop offset="1" stop-color="#ff6a1a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- volcán -->
+  <path d="M250 410 L345 175 L415 175 L510 410 Z" fill="#5a3b2e"/>
+  <path d="M345 175 L415 175 L404 198 L356 198 Z" fill="url(#lava)"/>
+  <path d="M372 198 L388 198 L380 260 Z" fill="#ffb13b"/>
+  <circle cx="392" cy="135" r="26" fill="#8a7d75" opacity=".7"/>
+  <circle cx="420" cy="92" r="34" fill="#8a7d75" opacity=".55"/>
+  <!-- suelo -->
+  <path d="M0 400 Q256 360 512 400 L512 512 L0 512 Z" fill="#b8864b"/>
+  <!-- cabeza de dino (low-poly) -->
+  <g transform="translate(-60 40)">
+  <g stroke="#2b1a0e" stroke-width="12" stroke-linejoin="round">
+    <path d="M150 395 L150 300 Q150 250 200 245 L330 238 Q385 236 392 285 L396 318 Q398 340 375 343 L300 348 L300 395 Z" fill="#7cc242"/>
+    <path d="M300 348 L380 343 L372 372 L300 380 Z" fill="#d8f0a0"/>
+  </g>
+  <circle cx="262" cy="282" r="20" fill="#fff" stroke="#2b1a0e" stroke-width="8"/>
+  <circle cx="268" cy="284" r="9" fill="#2b1a0e"/>
+  <path d="M330 345 l10 18 l10 -18 M352 344 l10 18 l10 -18" fill="#fff" stroke="#2b1a0e" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>

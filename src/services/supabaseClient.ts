@@ -1,31 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { BackendError, SUPABASE_ANON_KEY, SUPABASE_URL } from './env';
 
 /**
- * Cliente de Supabase del navegador (clave `anon`, pública). Si faltan las
- * variables de entorno el juego funciona en "modo sin servidor" con el
- * monedero local (útil para desarrollar sin backend).
+ * Cliente de Supabase del navegador (clave `anon`, pública). Solo se carga
+ * cuando hay backend configurado (ver services/backend.ts).
  */
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
 export const supabase: SupabaseClient | null =
-  url && anonKey
-    ? createClient(url, anonKey, {
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
       })
     : null;
-
-export const isBackendEnabled = supabase !== null;
-
-/** URL pública del juego (links de referido, redirecciones de login). */
-export const SITE_URL: string = (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined) ?? window.location.origin;
-
-/** Error de negocio devuelto por una Edge Function (p. ej. INSUFFICIENT_COINS). */
-export class BackendError extends Error {
-  constructor(readonly code: string) {
-    super(code);
-  }
-}
 
 /** Llama a una Edge Function y devuelve su JSON o lanza BackendError con el código. */
 export async function callFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {

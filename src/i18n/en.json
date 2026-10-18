@@ -199,5 +199,15 @@
   "story.meters": "m",
   "story.challenge": "Can you beat me?",
   "story.linkCta": "PLAY WITH MY LINK AND GET {bonus} COINS",
-  "story.linkCtaGuest": "PLAY FOR FREE AT"
+  "story.linkCtaGuest": "PLAY FOR FREE AT",
+  "pwa.install": "📲 Install app",
+  "pwa.iosTitle": "Install dinoMau",
+  "pwa.iosSteps": "In Safari tap <b>Share</b> <span class=\"ios-share\">⬆</span> and then <b>“Add to Home Screen”</b>. You'll get dinoMau as a full-screen app!",
+  "pwa.ok": "Got it",
+  "pwa.update": "🦖 A new version of dinoMau is available",
+  "pwa.updateNow": "Update",
+  "pwa.offlineReady": "✅ Ready to play offline",
+  "pwa.installed": "🎉 dinoMau installed!",
+  "rotate.title": "Rotate your phone",
+  "rotate.text": "dinoMau is played in portrait 📱"
 }

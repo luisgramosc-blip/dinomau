@@ -1,25 +1,8 @@
-import type { BattleResult } from '@/battle/BattleController';
 import type { DinoId } from '@/config/dinos.config';
 import type { AuthService } from './AuthService';
-import { BackendError, callFunction } from './supabaseClient';
-
-export interface StartedRun {
-  runId: string;
-  seed: number;
-}
-
-export interface RunReportInput {
-  distance: number;
-  score: number;
-  coinsCollected: number;
-  durationMs: number;
-  battles: BattleResult[];
-}
-
-export type FinishResult =
-  | { status: 'finished'; awarded: number; coins: number; newRecord: boolean }
-  | { status: 'rejected'; reason: string; coins: number }
-  | { status: 'error'; code: string };
+import { BackendError } from './env';
+import type { FinishResult, RunReportInput, RunTracker, StartedRun } from './RunTracker';
+import { callFunction } from './supabaseClient';
 
 const CLIENT_VERSION = `web-${import.meta.env.MODE}`;
 const START_TIMEOUT_MS = 4000;
@@ -29,10 +12,10 @@ const START_TIMEOUT_MS = 4000;
  * partida; `finish-run` la valida y acredita las monedas. Sin sesión (invitado)
  * o sin backend, las partidas no se guardan.
  */
-export class RunService {
+export class RunService implements RunTracker {
   private current: StartedRun | null = null;
 
-  constructor(private readonly auth: AuthService | null) {}
+  constructor(private readonly auth: AuthService) {}
 
   /**
    * Abre una partida. Devuelve null si no se guardará (invitado, sin backend o
@@ -40,7 +23,7 @@ export class RunService {
    */
   async start(dinoId: DinoId): Promise<StartedRun | null> {
     this.current = null;
-    if (!this.auth?.user) return null;
+    if (!this.auth.user) return null;
     try {
       const run = await withTimeout(callFunction<StartedRun>('start-run', { dinoId, clientVersion: CLIENT_VERSION }), START_TIMEOUT_MS);
       this.current = run;

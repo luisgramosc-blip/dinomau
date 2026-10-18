@@ -3,7 +3,8 @@ import { DINOS, STARTER_DINO, type DinoId } from '@/config/dinos.config';
 import { events } from '@/core/EventBus';
 import type { AuthService } from './AuthService';
 import type { EconomyError, EconomyResult, EconomyService, WalletSnapshot } from './EconomyService';
-import { BackendError, callFunction } from './supabaseClient';
+import { BackendError } from './env';
+import { callFunction } from './supabaseClient';
 
 export interface Profile {
   id: string;

@@ -9,6 +9,8 @@ export interface MainMenuActions {
   onInvite(): void;
   onSettings(): void;
   onAccount(): void;
+  onInstall(): void;
+  onUpdate(): void;
 }
 
 /**
@@ -32,6 +34,7 @@ export class MainMenuScreen {
         <h1 class="logo">dino<span>Mau</span></h1>
         <p class="tagline">${t('app.tagline')}</p>
         <p class="best-chip" data-ref="best"></p>
+        <button class="chip chip--install hidden" data-action="install">${t('pwa.install')}</button>
 
         <div class="menu__spacer"></div>
 
@@ -42,6 +45,10 @@ export class MainMenuScreen {
           <button class="tile" data-action="ranking"><span>🏆</span>${t('menu.ranking')}</button>
           <button class="tile" data-action="invite"><span>👥</span>${t('menu.invite')}</button>
         </nav>
+        <div class="update-banner hidden" data-ref="update">
+          <span>${t('pwa.update')}</span>
+          <button class="btn btn--primary" data-action="update">${t('pwa.updateNow')}</button>
+        </div>
         <p class="hint">${t(matchMedia('(pointer: coarse)').matches ? 'start.controls.touch' : 'start.controls.keys')}</p>
       </section>
     `);
@@ -52,10 +59,20 @@ export class MainMenuScreen {
       invite: actions.onInvite,
       settings: actions.onSettings,
       account: actions.onAccount,
+      install: actions.onInstall,
+      update: actions.onUpdate,
     };
     this.el.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((b) =>
       b.addEventListener('click', () => map[b.dataset.action!]?.()),
     );
+  }
+
+  setInstallVisible(visible: boolean): void {
+    $(this.el, '[data-action="install"]').classList.toggle('hidden', !visible);
+  }
+
+  setUpdateVisible(visible: boolean): void {
+    $(this.el, '[data-ref="update"]').classList.toggle('hidden', !visible);
   }
 
   /** Etiqueta del botón de cuenta: nombre, "Invitado · Entrar" o "Sin conexión". */

@@ -1,6 +1,7 @@
 import { REFERRAL_CONFIG } from '@/config/referral.config';
 import { formatNumber, t } from '@/i18n/i18n';
-import { ReferralService } from '@/services/ReferralService';
+import type { ReferralService } from '@/services/ReferralService';
+import { referralLink } from '@/services/env';
 import { $, hide, html, show } from '../dom';
 
 /**
@@ -75,7 +76,7 @@ export class InviteScreen {
     }
     show(content);
     hide(notice);
-    this.link = ReferralService.linkFor(code);
+    this.link = referralLink(code);
     $<HTMLInputElement>(this.el, '[data-ref="link"]').value = this.link;
     void this.loadStats();
   }

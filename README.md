@@ -7,7 +7,9 @@ Endless runner 3D ambientado en la era jurásica. Corre por la selva, esquiva tr
 - **Backend:** Supabase (Auth, Postgres con RLS, Edge Functions)
 - **Despliegue:** Vercel (frontend) + Supabase (backend)
 
-> Estado: **Fase 7 completada**. Ya funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, los referidos con bonos, y la imagen para historias con botones para compartir.
+> Estado: **Fase 8 completada (juego terminado)**. Funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, los referidos con bonos, la imagen para historias, y el juego se instala como app (PWA) y funciona sin conexión.
+>
+> 👉 Para publicarlo en internet sigue **[DEPLOY.md](DEPLOY.md)** (guía paso a paso, sin conocimientos técnicos).
 >
 > **Dos modos.** Con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` definidas, todo va al servidor. Sin ellas el juego funciona entero en *modo local* (monedero en el dispositivo), útil para desarrollar sin backend.
 
@@ -401,9 +403,24 @@ La lógica de las Edge Functions vive en `supabase/functions/_shared/handlers.ts
 - `tests/integration/server.test.ts`: flujos completos contra Postgres real con las migraciones aplicadas.
 - `tests/unit/ConfigSync.test.ts`: falla si los precios o las reglas del cliente dejan de coincidir con los del SQL.
 
+### PWA y rendimiento (Fase 8)
+
+- **Instalable:** `vite-plugin-pwa` genera el manifiesto y el service worker. En Android aparece el botón *📲 Instalar app* en el menú; en iPhone ese botón explica cómo usar *Compartir → Añadir a pantalla de inicio* (`src/pwa/PwaService.ts`, `IosInstallSheet.ts`).
+- **Sin conexión:** todo el juego (código, fuentes, iconos) queda en caché tras la primera visita. Las llamadas a Supabase nunca se sirven de caché; sin conexión se juega en modo invitado. Los modelos GLB y audios de `public/assets/` se guardan en caché al usarse.
+- **Actualizaciones:** cuando publicas una versión nueva, el menú muestra un aviso *Actualizar*; nunca se recarga a mitad de partida.
+- **Fuentes propias:** Lilita One y Nunito se sirven desde el propio juego (`@fontsource`), sin Google Fonts.
+- **Carga más rápida:** Three.js va en su propio archivo (se queda en caché entre versiones), el cliente de Supabase solo se descarga si está configurado, y el generador de la imagen para historias solo al compartir. Código del juego: ~47 KB gzip; Three.js: ~160 KB gzip.
+- **Calidad adaptativa** (`src/engine/QualityManager.ts`): si la partida baja de 48 FPS durante 3 s, reduce la resolución interna por pasos (hasta 50 %, mínimo 0,75 píxeles por píxel CSS); si va sobrada, la sube. Se recuerda por dispositivo.
+- **Pantalla encendida** durante la partida (Screen Wake Lock) y **pausa automática** al cambiar de app o al girar el móvil. En horizontal se muestra el aviso *Gira tu teléfono*: el juego es vertical.
+- **Medidas** (Pixel 7 emulado): lógica del juego 0,06 ms por fotograma (0,24 ms con la CPU 4× más lenta; el presupuesto a 60 FPS es 16,6 ms), ~100–120 draw calls y ~25 k triángulos por fotograma.
+- **Pantallas probadas:** iPhone SE, iPhone 15 Pro Max, Pixel 7, Galaxy S9+, iPad y móvil en horizontal (menú, tienda, partida, pausa y fin de partida), sin elementos fuera de pantalla.
+- **Iconos:** se generan desde `design/icon-source.svg` con `node scripts/generate-icons.mjs`.
+
 ---
 
 ## 5. Desplegar (Vercel + Supabase)
+
+> Guía detallada para principiantes: [DEPLOY.md](DEPLOY.md).
 
 ### 5.1 Supabase
 
@@ -445,7 +462,7 @@ supabase functions deploy claim-referral
 - [ ] Registro con email llega y confirma
 - [ ] Login con Google redirige de vuelta al juego
 - [ ] `https://<dominio>/r/CODIGO` abre el juego y aplica el bono tras verificar el email
-- [ ] Lighthouse → PWA instalable; prueba "Añadir a pantalla de inicio" en Android (Chrome) e iOS (Safari)
+- [ ] Lighthouse → PWA instalable (manifiesto, iconos y service worker ya incluidos); prueba "Añadir a pantalla de inicio" en Android (Chrome) e iOS (Safari)
 
 ---
 
@@ -472,4 +489,4 @@ Desde el primer día el juego funciona con mallas generadas por código (`src/as
 | 5 | Supabase: cuentas, guardado en servidor, ranking | ✅ |
 | 6 | Referidos y bonos | ✅ |
 | 7 | Imagen para historias y compartir | ✅ |
-| 8 | PWA, optimización y pruebas en móvil | ⏳ |
+| 8 | PWA, optimización y pruebas en móvil | ✅ |

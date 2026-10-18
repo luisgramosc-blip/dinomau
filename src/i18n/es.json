@@ -199,5 +199,15 @@
   "story.meters": "m",
   "story.challenge": "¿Me superas?",
   "story.linkCta": "JUEGA CON MI LINK Y GANA {bonus} MONEDAS",
-  "story.linkCtaGuest": "JUEGA GRATIS EN"
+  "story.linkCtaGuest": "JUEGA GRATIS EN",
+  "pwa.install": "📲 Instalar app",
+  "pwa.iosTitle": "Instala dinoMau",
+  "pwa.iosSteps": "En Safari toca <b>Compartir</b> <span class=\"ios-share\">⬆</span> y luego <b>«Añadir a pantalla de inicio»</b>. ¡Tendrás dinoMau como una app, a pantalla completa!",
+  "pwa.ok": "Entendido",
+  "pwa.update": "🦖 Hay una versión nueva de dinoMau",
+  "pwa.updateNow": "Actualizar",
+  "pwa.offlineReady": "✅ Listo para jugar sin conexión",
+  "pwa.installed": "🎉 ¡dinoMau instalado!",
+  "rotate.title": "Gira tu teléfono",
+  "rotate.text": "dinoMau se juega en vertical 📱"
 }

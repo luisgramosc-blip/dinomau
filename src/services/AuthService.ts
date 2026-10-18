@@ -1,5 +1,5 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
-import { SITE_URL } from './supabaseClient';
+import { SITE_URL } from './env';
 
 export interface AuthUser {
   id: string;

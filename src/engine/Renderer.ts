@@ -28,6 +28,21 @@ export class Renderer {
     this.handleResize();
   }
 
+  /** Pixel ratio máximo que tiene sentido en este dispositivo. */
+  get maxPixelRatio(): number {
+    return Math.min(window.devicePixelRatio || 1, GAME_CONFIG.render.maxPixelRatio);
+  }
+
+  get pixelRatio(): number {
+    return this.three.getPixelRatio();
+  }
+
+  /** Cambia la resolución interna (calidad adaptativa). */
+  setPixelRatio(ratio: number): void {
+    this.three.setPixelRatio(ratio);
+    this.handleResize();
+  }
+
   onResize(listener: (w: number, h: number) => void): void {
     this.resizeListeners.push(listener);
     listener(this.width, this.height);
