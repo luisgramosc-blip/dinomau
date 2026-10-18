@@ -25,11 +25,19 @@ export class AdService {
     private readonly now: () => number = () => Date.now(),
   ) {}
 
-  static create(name: AdProviderName = resolveAdProvider()): AdService {
+  /**
+   * `nonPersonalized`: modo infantil (menores de 13). Se piden anuncios no
+   * personalizados, sin perfiles de intereses.
+   */
+  static create(name: AdProviderName = resolveAdProvider(), opts: { nonPersonalized?: boolean } = {}): AdService {
     const env = import.meta.env;
     const provider =
       name === 'adsense'
-        ? new AdSenseProvider(ADSENSE_CLIENT, { test: env.VITE_ADSENSE_TEST === 'on', frequencyHint: '30s' })
+        ? new AdSenseProvider(ADSENSE_CLIENT, {
+            test: env.VITE_ADSENSE_TEST === 'on',
+            frequencyHint: '30s',
+            nonPersonalized: !!opts.nonPersonalized,
+          })
         : name === 'mock'
           ? new MockAdProvider()
           : new NoAdProvider();

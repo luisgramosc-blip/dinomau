@@ -232,5 +232,10 @@
   "gift.left": "{value} today",
   "gift.done": "🎁 +{value} coins!",
   "gift.login": "Create an account to keep your gifts",
-  "settings.privacy": "Privacy policy"
+  "settings.privacy": "Privacy policy",
+  "age.title": "Welcome to dinoMau!",
+  "age.question": "What year were you born?",
+  "age.select": "Choose the year",
+  "age.continue": "Continue",
+  "age.note": "We only ask once and it never leaves your device."
 }

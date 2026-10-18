@@ -10,6 +10,10 @@ import type { AdProvider, RewardedOutcome } from './AdProvider';
  * sirve anuncios de prueba (úsalo mientras desarrollas: hacer clic en tus
  * propios anuncios reales puede cerrar la cuenta).
  *
+ * Jugadores menores de 13 años (modo infantil): se piden anuncios no
+ * personalizados. Además, en AdSense hay que declarar que parte del público
+ * son niños (ver DEPLOY.md).
+ *
  * El aviso de consentimiento de cookies (Europa/Reino Unido) lo muestra Google
  * con este mismo script si lo activas en AdSense → Privacidad y mensajes.
  */
@@ -28,7 +32,7 @@ interface AdBreakConfig {
   adBreakDone?: (info: PlacementInfo) => void;
 }
 
-type AdsQueue = Array<Record<string, unknown>>;
+type AdsQueue = Array<Record<string, unknown>> & { requestNonPersonalizedAds?: number };
 declare global {
   interface Window {
     adsbygoogle?: AdsQueue;
@@ -47,12 +51,14 @@ export class AdSenseProvider implements AdProvider {
 
   constructor(
     private readonly client: string,
-    private readonly options: { test: boolean; frequencyHint?: string } = { test: false },
+    private readonly options: { test: boolean; frequencyHint?: string; nonPersonalized?: boolean } = { test: false },
   ) {}
 
   async init(): Promise<void> {
     if (document.querySelector(`script[src^="${SCRIPT_URL}"]`)) return;
     window.adsbygoogle = window.adsbygoogle ?? [];
+    // Modo infantil: anuncios no personalizados (debe fijarse antes de cargar el script)
+    if (this.options.nonPersonalized) window.adsbygoogle.requestNonPersonalizedAds = 1;
     const push = (o: Record<string, unknown>) => window.adsbygoogle!.push(o);
     window.adBreak = push as unknown as Window['adBreak'];
     window.adConfig = push;

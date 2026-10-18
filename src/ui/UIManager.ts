@@ -86,6 +86,8 @@ export class UIManager {
     actions: UIActions,
     shareDeps: Omit<ShareDeps, 'toast'>,
     private readonly pwa: PwaService,
+    /** Modo infantil: sin cuenta, ranking, invitaciones ni compartir en redes. */
+    options: { kidMode: boolean } = { kidMode: false },
   ) {
     root.innerHTML = '';
     const { auth, serverEconomy, leaderboard, referrals } = backend;
@@ -149,6 +151,10 @@ export class UIManager {
       this.toast.el,
       createRotateNotice(),
     );
+    if (options.kidMode) {
+      this.menu.setKidMode();
+      this.gameOver.setKidMode();
+    }
     stopSwipe(root);
     this.refreshMenu();
     this.refreshAccount();

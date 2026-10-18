@@ -28,6 +28,8 @@ import { UIManager } from './ui/UIManager';
 import { PHONE_LANDSCAPE_QUERY } from './ui/components/RotateNotice';
 import { setLanguage, t } from './i18n/i18n';
 import { AdService } from './ads/AdService';
+import { loadAgeGroup, saveAgeGroup } from './age/AgeGate';
+import { askAgeGroup } from './ui/screens/AgeScreen';
 import { AdFlows } from './ads/AdFlows';
 import { LocalAdRewards } from './services/AdRewardService';
 
@@ -44,6 +46,14 @@ function captureReferralLink(): void {
     /* sin almacenamiento */
   }
   window.history.replaceState(null, '', '/');
+}
+
+function forgetPendingReferral(): void {
+  try {
+    localStorage.removeItem(PENDING_REFERRAL_KEY);
+  } catch {
+    /* sin almacenamiento */
+  }
 }
 
 function hasPendingReferral(): boolean {
@@ -72,15 +82,26 @@ async function bootstrap(): Promise<void> {
   const uiRoot = document.getElementById('ui')!;
   const splashBar = document.querySelector<HTMLElement>('.splash__bar > span');
 
+  // Los modelos empiezan a cargarse ya, mientras se responde la edad
+  const assets = new AssetLoader();
+  const preload = assets.preload((ratio) => splashBar && (splashBar.style.transform = `scaleX(${ratio})`));
+
+  // --- Edad (solo la primera vez): menores de 13 → modo infantil ---------------
+  let ageGroup = loadAgeGroup();
+  if (!ageGroup) {
+    ageGroup = await askAgeGroup();
+    saveAgeGroup(ageGroup);
+  }
+  const kidMode = ageGroup === 'child';
+  if (kidMode) forgetPendingReferral();
+
   // --- Servicios: servidor (Supabase, carga diferida) o local -----------------
-  // Se empieza a descargar ya, en paralelo con los modelos
-  const backendPromise = isBackendConfigured
+  // En modo infantil no hay cuentas: todo queda en el dispositivo
+  const backendPromise = isBackendConfigured && !kidMode
     ? import('./services/backend').then((m) => m.createBackend())
     : Promise.resolve(null);
 
-  const assets = new AssetLoader();
-  await assets.preload((ratio) => splashBar && (splashBar.style.transform = `scaleX(${ratio})`));
-
+  await preload;
   const backend = await backendPromise;
   const auth = backend?.auth ?? null;
   const serverEconomy = backend?.serverEconomy ?? null;
@@ -89,7 +110,7 @@ async function bootstrap(): Promise<void> {
   const runs = backend?.runs ?? localRunTracker;
   const economy: EconomyService = serverEconomy ?? new LocalEconomyService();
   // Anuncios: el SDK se carga en segundo plano (si falla o hay bloqueador, el juego sigue)
-  const ads = AdService.create();
+  const ads = AdService.create(undefined, { nonPersonalized: kidMode });
   void ads.init();
   const adRewards = backend?.adRewards ?? new LocalAdRewards(economy);
   /** Victorias en batallas de la partida en curso (el perfil se actualiza al terminarla). */
@@ -189,7 +210,7 @@ async function bootstrap(): Promise<void> {
       if (result.ok) ui.toast.show(`✅ ${t('shop.equippedToast', { name: dino.name })}`);
       else if (result.error === 'AUTH_REQUIRED') ui.openAuth('buy');
     },
-  }, { assets, getLink: shareLink }, pwa);
+  }, { assets, getLink: shareLink }, pwa, { kidMode });
   const flows = new AdFlows({ ads, rewards: adRewards, runner, ui });
 
   // Batallas: el runner avisa al llegar al umbral de monedas

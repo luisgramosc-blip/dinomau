@@ -51,6 +51,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         // Todo el juego (JS, CSS, fuentes, iconos) queda disponible sin conexión
         globPatterns: ['**/*.{js,css,html,woff2,png,svg,webmanifest}'],
+        // La política de privacidad se lee en línea (Cloudflare la sirve como /privacy)
+        globIgnores: ['privacy.html'],
         // Los modelos GLB y audios reales se cachean al usarse (pueden pesar mucho)
         runtimeCaching: [
           {
@@ -60,7 +62,7 @@ export default defineConfig(({ mode }) => ({
           },
         ],
         // Las llamadas a Supabase nunca se sirven de caché
-        navigateFallbackDenylist: [/^\/(rest|auth|functions)\//, /^\/(privacy\.html|ads\.txt)$/],
+        navigateFallbackDenylist: [/^\/(rest|auth|functions)\//, /^\/(privacy(\.html)?|ads\.txt)$/],
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },

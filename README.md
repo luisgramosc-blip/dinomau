@@ -5,9 +5,9 @@ Endless runner 3D ambientado en la era jurásica. Corre por la selva, esquiva tr
 - **Juego:** Three.js + TypeScript + Vite
 - **App:** PWA instalable (Android/iOS), controles por swipe y teclado (flechas/WASD)
 - **Backend:** Supabase (Auth, Postgres con RLS, Edge Functions)
-- **Despliegue:** Vercel (frontend) + Supabase (backend)
+- **Despliegue:** Cloudflare Pages (frontend) + Supabase (backend)
 
-> Estado: **Fase 9 completada (anuncios)**. Funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, los referidos con bonos, la imagen para historias, el juego se instala como app (PWA) y funciona sin conexión, y gana dinero con anuncios (revivir, x2 monedas, regalo diario y anuncios entre partidas), por ahora en modo de prueba.
+> Estado: **Fase 10 completada (listo para publicar)**. Funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, los referidos con bonos, la imagen para historias, el juego se instala como app (PWA) y funciona sin conexión, y gana dinero con anuncios (revivir, x2 monedas, regalo diario y anuncios entre partidas), por ahora en modo de prueba.
 >
 > 👉 Para publicarlo en internet sigue **[DEPLOY.md](DEPLOY.md)** (guía paso a paso, sin conocimientos técnicos).
 >
@@ -71,7 +71,7 @@ Precios y estadísticas en `src/config/dinos.config.ts`. El balance de habilidad
 2. [Arquitectura](#2-arquitectura)
 3. [Esquema de la base de datos](#3-esquema-de-la-base-de-datos)
 4. [Correr en local](#4-correr-en-local)
-5. [Desplegar (Vercel + Supabase)](#5-desplegar-vercel--supabase)
+5. [Desplegar (Cloudflare Pages + Supabase)](#5-desplegar-cloudflare-pages--supabase)
 6. [Reemplazar assets placeholder](#6-reemplazar-assets-placeholder)
 7. [Fases de entrega](#7-fases-de-entrega)
 
@@ -103,7 +103,7 @@ dinoMau/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts                 # Vite + vite-plugin-pwa
-├── vercel.json                    # Rewrites SPA (incluye /r/:code → index.html)
+├── public/_headers                # Cabeceras de caché para Cloudflare Pages
 ├── .env.example
 │
 ├── public/
@@ -421,6 +421,13 @@ La lógica de las Edge Functions vive en `supabase/functions/_shared/handlers.ts
 - **Pantallas probadas:** iPhone SE, iPhone 15 Pro Max, Pixel 7, Galaxy S9+, iPad y móvil en horizontal (menú, tienda, partida, pausa y fin de partida), sin elementos fuera de pantalla.
 - **Iconos:** se generan desde `design/icon-source.svg` con `node scripts/generate-icons.mjs`.
 
+### Edad y modo infantil (Fase 10)
+
+- La primera vez el juego pregunta el **año de nacimiento** (`src/ui/screens/AgeScreen.ts`). Es una pregunta neutra: no sugiere ningún año ni explica qué cambia. La respuesta solo se guarda en el dispositivo (`src/age/AgeGate.ts`) y no se puede cambiar desde el juego.
+- Con solo el año no se sabe si ya cumplió años, así que ante la duda se elige el **modo infantil** (nacido hace 13 años o menos).
+- **Modo infantil** (menores de 13): no se carga Supabase, así que no hay cuenta, ranking ni invitaciones, y un link `/r/CODIGO` pendiente se descarta. Tampoco hay botón de compartir en redes. Monedas y dinos se guardan en el dispositivo. Los anuncios se piden **no personalizados** (`requestNonPersonalizedAds` en AdSense). Revivir, x2 y regalo diario siguen disponibles.
+- La política de privacidad (`legal/privacy.html`) lo explica.
+
 ### Anuncios (Fase 9)
 
 Todo se configura en `src/config/ads.config.ts`; la red de anuncios se elige con `VITE_ADS_PROVIDER`:
@@ -447,52 +454,21 @@ Todo se configura en `src/config/ads.config.ts`; la red de anuncios se elige con
 
 ---
 
-## 5. Desplegar (Vercel + Supabase)
+## 5. Desplegar (Cloudflare Pages + Supabase)
 
-> Guía detallada para principiantes: [DEPLOY.md](DEPLOY.md).
+La guía completa, paso a paso y sin tecnicismos, está en **[DEPLOY.md](DEPLOY.md)**. Resumen técnico:
 
-### 5.1 Supabase
-
-```bash
-# Crea el proyecto en https://supabase.com/dashboard y luego:
-supabase login
-supabase link --project-ref <PROJECT_REF>
-supabase db push                                  # aplica migraciones
-supabase functions deploy start-run
-supabase functions deploy finish-run
-supabase functions deploy purchase-dino
-supabase functions deploy claim-referral
-supabase functions deploy ad-reward
-```
-
-`SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` se inyectan solas en las Edge Functions. No hace falta definirlas como secretos.
-
-**Auth** (Dashboard → Authentication):
-
-1. *Sign In / Providers → Email*: activa **Confirm email**. Es necesario para el antifraude de referidos y evita cuentas con correos falsos.
-2. *Providers → Google*: crea un OAuth Client en Google Cloud Console y pega el Client ID y el Secret. URI de redirección autorizada: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`.
-3. *URL Configuration*:
-   - Site URL: `https://<tu-dominio>`
-   - Redirect URLs: `https://<tu-dominio>/**`, `http://localhost:5173/**`
-
-### 5.2 Vercel
-
-1. Importa el repositorio en Vercel. Framework: **Vite**. Build: `npm run build`. Output: `dist`.
-2. Variables de entorno (Production y Preview):
-   - `VITE_SUPABASE_URL` = `https://<PROJECT_REF>.supabase.co`
-   - `VITE_SUPABASE_ANON_KEY` = anon key del proyecto
-   - `VITE_PUBLIC_SITE_URL` = `https://<tu-dominio>`
-3. **Sin dominio propio todavía:** usa el subdominio gratuito que asigna Vercel (`https://dinomau.vercel.app` o similar) como `VITE_PUBLIC_SITE_URL` y como Site URL en Supabase. Cuando compres el dominio, conéctalo en Vercel → *Settings → Domains*, actualiza esas dos variables y vuelve a desplegar. Los links `/r/CODIGO` que ya se compartieron con `vercel.app` seguirán funcionando.
-4. `vercel.json` reescribe `/r/:code` y el resto de rutas a `index.html`, así los links de referido funcionan.
-
-> ⚠️ La `service_role` key **nunca** va en Vercel ni en el cliente.
-
-### 5.3 Checklist posterior al despliegue
-
-- [ ] Registro con email llega y confirma
-- [ ] Login con Google redirige de vuelta al juego
-- [ ] `https://<dominio>/r/CODIGO` abre el juego y aplica el bono tras verificar el email
-- [ ] Lighthouse → PWA instalable (manifiesto, iconos y service worker ya incluidos); prueba "Añadir a pantalla de inicio" en Android (Chrome) e iOS (Safari)
+- **Web:** Cloudflare Pages conectado a GitHub (`main`). Build `npm run build`, salida `dist`, `NODE_VERSION=22`.
+  Sin `404.html`, Pages sirve `index.html` en cualquier ruta (SPA), así funcionan los links `/r/CODIGO`.
+  Las cabeceras de caché están en `public/_headers`.
+- **Variables de entorno (build):** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_PUBLIC_SITE_URL`,
+  `VITE_CONTACT_EMAIL` y, para anuncios, `VITE_ADSENSE_CLIENT`, `VITE_ADSENSE_TEST` y `VITE_ADS_PROVIDER`.
+  Ver `.env.example`.
+- **Supabase:** las 3 migraciones en orden, las 5 Edge Functions (`start-run`, `finish-run`, `purchase-dino`,
+  `claim-referral`, `ad-reward`), *Confirm email* activado, *Site URL* y *Redirect URLs* con el dominio, y SMTP propio
+  (Resend) para los correos de confirmación.
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` se inyectan solas en las Edge Functions.
+  La `service_role` **nunca** va en Cloudflare ni en el cliente.
 
 ---
 
@@ -521,3 +497,4 @@ Desde el primer día el juego funciona con mallas generadas por código (`src/as
 | 7 | Imagen para historias y compartir | ✅ |
 | 8 | PWA, optimización y pruebas en móvil | ✅ |
 | 9 | Anuncios: revivir, x2 monedas, regalo diario, entre partidas; topes en servidor | ✅ |
+| 10 | Pregunta de edad y modo infantil (menores de 13); publicación en Cloudflare Pages | ✅ |

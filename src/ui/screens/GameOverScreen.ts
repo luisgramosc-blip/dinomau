@@ -16,6 +16,7 @@ export interface WalletSummary {
 /** Fin de partida: puntaje, distancia, monedas, récord, guardado y compartir. */
 export class GameOverScreen {
   readonly el: HTMLElement;
+  private kidMode = false;
 
   constructor(actions: { onRetry(): void; onMenu(): void; onCreateAccount(): void; onShare(): void; onDouble(): void }) {
     this.el = html(/* html */ `
@@ -48,6 +49,13 @@ export class GameOverScreen {
     $(this.el, '[data-action="double"]').addEventListener('click', actions.onDouble);
   }
 
+  /** Modo infantil: sin compartir en redes ni crear cuenta. */
+  setKidMode(): void {
+    this.kidMode = true;
+    $(this.el, '[data-action="share"]').remove();
+    hide($(this.el, '[data-action="create-account"]'));
+  }
+
   /** Botón "🎬 x2 monedas (+N)"; null lo oculta. */
   setDoubleOffer(bonus: number | null): void {
     const btn = $<HTMLButtonElement>(this.el, '[data-action="double"]');
@@ -67,7 +75,7 @@ export class GameOverScreen {
     el.textContent = text;
     el.dataset.kind = kind;
     const cta = $(this.el, '[data-action="create-account"]');
-    if (showCreateAccount) show(cta);
+    if (showCreateAccount && !this.kidMode) show(cta);
     else hide(cta);
   }
 

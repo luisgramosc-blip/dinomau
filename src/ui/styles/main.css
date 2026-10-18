@@ -1200,3 +1200,40 @@ body.ready .splash { opacity: 0; pointer-events: none; }
   .card--gameover .stats div { padding: 6px 12px; }
   .card--gameover .btn--reward { min-height: 44px; margin-bottom: 10px; }
 }
+
+/* --- Pregunta de edad (primera vez) ------------------------------------------- */
+.age-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+  background: linear-gradient(var(--jungle), #1d4512);
+}
+.age-gate__card { display: flex; flex-direction: column; gap: 14px; text-align: center; }
+.age-gate__card h2 { margin: 0; font-size: 28px; }
+.age-gate__logo { position: static; font-size: 52px; margin: 0; }
+.age-gate select {
+  font: 800 18px var(--font-body); /* ≥16px evita el zoom automático de iOS */
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(246, 227, 192, 0.3);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+}
+.age-gate select:focus { outline: none; border-color: var(--jungle-light); }
+.age-gate select option { color: #000; }
+.age-gate .btn:disabled { opacity: 0.5; }
+.age-gate__note { margin: 0; font-size: 13px; opacity: 0.75; }
+
+/* Modo infantil: solo la tienda bajo "Jugar" */
+.menu__grid--single { grid-template-columns: 1fr; }
+
+/* Pantallas muy bajas (iPhone SE): el menú pierde la ayuda de controles para que quepa todo */
+@media (max-height: 600px) {
+  .menu__top { margin-bottom: 1vh; }
+  .screen--menu { gap: 8px; }
+  .screen--menu .hint { display: none; }
+}

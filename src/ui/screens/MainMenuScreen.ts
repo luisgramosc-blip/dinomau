@@ -87,6 +87,14 @@ export class MainMenuScreen {
     $<HTMLButtonElement>(this.el, '[data-action="gift"]').disabled = busy;
   }
 
+  /** Modo infantil: fuera cuenta, ranking e invitaciones (solo queda la tienda). */
+  setKidMode(): void {
+    for (const sel of ['[data-action="account"]', '[data-action="ranking"]', '[data-action="invite"]']) {
+      $(this.el, sel).classList.add('hidden');
+    }
+    $(this.el, '.menu__grid').classList.add('menu__grid--single');
+  }
+
   setUpdateVisible(visible: boolean): void {
     $(this.el, '[data-ref="update"]').classList.toggle('hidden', !visible);
   }
