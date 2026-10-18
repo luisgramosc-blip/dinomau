@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ADS_CONFIG } from '@/config/ads.config';
 import { BATTLE_CONFIG } from '@/config/battle.config';
 import type { BattleResult } from '@/battle/BattleController';
 import { GAME_CONFIG, laneX } from '@/config/game.config';
@@ -30,7 +31,7 @@ import { createAABB, intersects, overlap } from './systems/CollisionSystem';
 import { DebrisSystem } from './systems/DebrisSystem';
 import { createAbility, type AbilityContext, type AbilityHandler } from './abilities/abilities';
 
-export type RunState = 'ready' | 'running' | 'paused' | 'countdown' | 'battle' | 'dying' | 'gameover';
+export type RunState = 'ready' | 'running' | 'paused' | 'countdown' | 'battle' | 'dying' | 'revive' | 'gameover';
 
 const W = GAME_CONFIG.world;
 const SPEED = GAME_CONFIG.speed;
@@ -80,6 +81,14 @@ export class RunnerScene implements Updatable, Renderable {
   private lastCountdownValue = 0;
   private fxTime = 0;
   private lastEmittedScore = -1;
+
+  // --- Revivir (anuncio) ---
+  /**
+   * Lo fija main.ts: ¿se ofrece revivir tras este choque? Sin él la partida
+   * termina directamente. El runner no sabe nada de anuncios.
+   */
+  reviveGate: ((revivesUsed: number, distance: number) => boolean) | null = null;
+  private revivesUsed = 0;
 
   constructor(
     private readonly renderer: Renderer,
@@ -230,6 +239,7 @@ export class RunnerScene implements Updatable, Renderable {
     this.battles.length = 0;
     this.speed = SPEED.start;
     this.deathTimer = 0;
+    this.revivesUsed = 0;
     this.lastEmittedScore = -1;
     this.player.reset();
     this.ability.reset(this.abilityCtx);
@@ -256,8 +266,9 @@ export class RunnerScene implements Updatable, Renderable {
         this.speed = Math.max(0, this.speed - this.speed * 8 * dt);
         this.advanceWorld(dt);
         this.deathTimer -= dt;
-        if (this.deathTimer <= 0) this.finishRun();
+        if (this.deathTimer <= 0) this.afterDeath();
         break;
+      case 'revive':
       case 'paused':
       case 'gameover':
         return;
@@ -544,6 +555,40 @@ export class RunnerScene implements Updatable, Renderable {
     this.cameraRig.shake(0.5, 0.45);
     events.emit('player:hit', { obstacle });
     vibrate([120, 40, 80]);
+  }
+
+  /** Tras la animación del choque: ofrecer revivir o terminar. */
+  private afterDeath(): void {
+    if (this.reviveGate?.(this.revivesUsed, this.score.distance)) {
+      this.state = 'revive';
+      events.emit('run:reviveOffer');
+    } else {
+      this.finishRun();
+    }
+  }
+
+  /**
+   * Revive (vio el anuncio): quita los obstáculos cercanos, el dino vuelve
+   * invulnerable un momento y hay cuenta regresiva antes de seguir.
+   * La partida continúa con el mismo puntaje, monedas y tiempo.
+   */
+  revive(): void {
+    if (this.state !== 'revive') return;
+    this.revivesUsed++;
+    const cfg = ADS_CONFIG.revive;
+    const limit = this.score.distance + cfg.clearAheadMeters;
+    this.obstaclePools.forEach((pool) => pool.forEachActive((o) => o.d < limit && pool.release(o)));
+    this.player.revive(cfg.invulnerableSeconds);
+    this.speed = speedAt(this.score.elapsed) * this.speedMultiplier;
+    this.cameraRig.reset();
+    events.emit('run:revived');
+    this.state = 'paused';
+    this.resume();
+  }
+
+  /** No quiso (o no pudo) revivir: fin de partida. */
+  declineRevive(): void {
+    if (this.state === 'revive') this.finishRun();
   }
 
   private finishRun(): void {

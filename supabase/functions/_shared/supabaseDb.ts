@@ -1,6 +1,6 @@
 // Implementación de `Db` con supabase-js y la clave service_role (solo Deno).
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0';
-import type { Db, FinalizeArgs, RunRow } from './handlers.ts';
+import type { AdRewardOutcome, Db, FinalizeArgs, RunRow } from './handlers.ts';
 
 export function adminClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL');
@@ -69,6 +69,9 @@ export function supabaseDb(sb: SupabaseClient): Db {
     },
     async claimReferral(userId, code) {
       return Number(unwrap(await sb.rpc('claim_referral', { p_invitee: userId, p_code: code })));
+    },
+    async claimAdReward(userId, kind, runId) {
+      return unwrap(await sb.rpc('claim_ad_reward', { p_user: userId, p_kind: kind, p_run: runId })) as AdRewardOutcome;
     },
     now: () => new Date(),
   };

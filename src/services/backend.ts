@@ -2,6 +2,7 @@ import { AuthService } from './AuthService';
 import { LeaderboardService } from './LeaderboardService';
 import { ReferralService } from './ReferralService';
 import { RunService } from './RunService';
+import { SupabaseAdRewards } from './SupabaseAdRewards';
 import { SupabaseEconomyService } from './SupabaseEconomyService';
 import { supabase } from './supabaseClient';
 
@@ -20,10 +21,11 @@ export async function createBackend() {
     leaderboard: new LeaderboardService(supabase),
     referrals: new ReferralService(supabase, auth),
     runs: new RunService(auth),
+    adRewards: new SupabaseAdRewards(supabase, auth, serverEconomy),
   };
   try {
     await auth.init();
-    await serverEconomy.refresh();
+    await Promise.all([serverEconomy.refresh(), backend.adRewards.refresh()]);
   } catch (err) {
     console.warn('[backend] sin conexión al iniciar', err);
   }

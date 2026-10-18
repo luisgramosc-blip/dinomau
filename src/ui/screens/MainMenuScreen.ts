@@ -11,6 +11,7 @@ export interface MainMenuActions {
   onAccount(): void;
   onInstall(): void;
   onUpdate(): void;
+  onGift(): void;
 }
 
 /**
@@ -35,6 +36,7 @@ export class MainMenuScreen {
         <p class="tagline">${t('app.tagline')}</p>
         <p class="best-chip" data-ref="best"></p>
         <button class="chip chip--install hidden" data-action="install">${t('pwa.install')}</button>
+        <button class="chip chip--gift hidden" data-action="gift"><span data-ref="gift"></span><small data-ref="giftLeft"></small></button>
 
         <div class="menu__spacer"></div>
 
@@ -61,6 +63,7 @@ export class MainMenuScreen {
       account: actions.onAccount,
       install: actions.onInstall,
       update: actions.onUpdate,
+      gift: actions.onGift,
     };
     this.el.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((b) =>
       b.addEventListener('click', () => map[b.dataset.action!]?.()),
@@ -69,6 +72,19 @@ export class MainMenuScreen {
 
   setInstallVisible(visible: boolean): void {
     $(this.el, '[data-action="install"]').classList.toggle('hidden', !visible);
+  }
+
+  /** Regalo diario: null lo oculta; `left` = usos que quedan hoy. */
+  setGift(gift: { bonus: number; left: number } | null): void {
+    const btn = $<HTMLButtonElement>(this.el, '[data-action="gift"]');
+    btn.classList.toggle('hidden', !gift);
+    if (!gift) return;
+    $(btn, '[data-ref="gift"]').textContent = t('gift.button', { value: formatNumber(gift.bonus) });
+    $(btn, '[data-ref="giftLeft"]').textContent = t('gift.left', { value: gift.left });
+  }
+
+  setGiftBusy(busy: boolean): void {
+    $<HTMLButtonElement>(this.el, '[data-action="gift"]').disabled = busy;
   }
 
   setUpdateVisible(visible: boolean): void {

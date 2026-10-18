@@ -17,7 +17,7 @@ export interface WalletSummary {
 export class GameOverScreen {
   readonly el: HTMLElement;
 
-  constructor(actions: { onRetry(): void; onMenu(): void; onCreateAccount(): void; onShare(): void }) {
+  constructor(actions: { onRetry(): void; onMenu(): void; onCreateAccount(): void; onShare(): void; onDouble(): void }) {
     this.el = html(/* html */ `
       <section class="screen screen--modal hidden">
         <div class="card card--gameover">
@@ -26,6 +26,7 @@ export class GameOverScreen {
           <p class="big-score" data-ref="score">0</p>
           <p class="earned"><span class="coin-icon"></span><b data-ref="earned"></b><small data-ref="balance"></small></p>
           <p class="save-status" data-ref="save"></p>
+          <button class="btn btn--reward hidden" data-action="double"></button>
           <button class="btn btn--google hidden" data-action="create-account">${t('gameover.createAccount')}</button>
           <dl class="stats">
             <div><dt>${t('gameover.distance')}</dt><dd data-ref="distance">0</dd></div>
@@ -44,6 +45,20 @@ export class GameOverScreen {
     $(this.el, '[data-action="menu"]').addEventListener('click', actions.onMenu);
     $(this.el, '[data-action="create-account"]').addEventListener('click', actions.onCreateAccount);
     $(this.el, '[data-action="share"]').addEventListener('click', actions.onShare);
+    $(this.el, '[data-action="double"]').addEventListener('click', actions.onDouble);
+  }
+
+  /** Botón "🎬 x2 monedas (+N)"; null lo oculta. */
+  setDoubleOffer(bonus: number | null): void {
+    const btn = $<HTMLButtonElement>(this.el, '[data-action="double"]');
+    btn.disabled = false;
+    if (bonus === null) return hide(btn);
+    btn.textContent = t('double.button', { value: formatNumber(bonus) });
+    show(btn);
+  }
+
+  setDoubleBusy(busy: boolean): void {
+    $<HTMLButtonElement>(this.el, '[data-action="double"]').disabled = busy;
   }
 
   /** Estado del guardado en el servidor (texto vacío = ocultar). */
@@ -79,6 +94,7 @@ export class GameOverScreen {
     $(this.el, '[data-ref="earned"]').textContent = t('gameover.earned', { value: formatNumber(run.coins) });
     $(this.el, '[data-ref="balance"]').textContent = '';
     this.setSaveStatus('');
+    this.setDoubleOffer(null);
     $(this.el, '[data-ref="score"]').textContent = formatNumber(run.score);
     $(this.el, '[data-ref="distance"]').textContent = t('units.meters', { value: formatNumber(run.distance) });
     $(this.el, '[data-ref="coins"]').textContent = formatNumber(run.coins);

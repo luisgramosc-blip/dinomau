@@ -106,6 +106,10 @@ export class AudioManager {
     });
     events.on('battle:finished', ({ won }) => this.sfx(won ? 'victory' : 'defeat'));
     events.on('ability:used', ({ ability }) => ability === 'stun_roar' && this.sfx('roar'));
+    // Los anuncios traen su propio sonido: el juego calla mientras tanto
+    events.on('ad:start', () => this.master && (this.master.gain.value = 0));
+    events.on('ad:end', () => this.master && (this.master.gain.value = 1));
+    events.on('run:revived', () => this.setMusicIntensity(1));
   }
 
   // --- Efectos ----------------------------------------------------------------

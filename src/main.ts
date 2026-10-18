@@ -27,6 +27,9 @@ import { allowScreenOff, keepScreenOn } from './utils/wakeLock';
 import { UIManager } from './ui/UIManager';
 import { PHONE_LANDSCAPE_QUERY } from './ui/components/RotateNotice';
 import { setLanguage, t } from './i18n/i18n';
+import { AdService } from './ads/AdService';
+import { AdFlows } from './ads/AdFlows';
+import { LocalAdRewards } from './services/AdRewardService';
 
 /** Tiempo mínimo del splash para que el logo no "parpadee" en equipos rápidos. */
 const MIN_SPLASH_MS = 700;
@@ -85,6 +88,10 @@ async function bootstrap(): Promise<void> {
   const referrals = backend?.referrals ?? null;
   const runs = backend?.runs ?? localRunTracker;
   const economy: EconomyService = serverEconomy ?? new LocalEconomyService();
+  // Anuncios: el SDK se carga en segundo plano (si falla o hay bloqueador, el juego sigue)
+  const ads = AdService.create();
+  void ads.init();
+  const adRewards = backend?.adRewards ?? new LocalAdRewards(economy);
   /** Victorias en batallas de la partida en curso (el perfil se actualiza al terminarla). */
   let battlesWonThisRun = 0;
   const battlesWon = () =>
@@ -120,6 +127,13 @@ async function bootstrap(): Promise<void> {
     }
   };
 
+  /** "Revancha": anuncio entre partidas si toca y nueva partida. */
+  const retry = async () => {
+    if (flows.isShowingAd || starting) return;
+    await flows.beforeNextRun('retry');
+    await startRun();
+  };
+
   /** Link para compartir: el de referido si hay cuenta con código, si no la web del juego. */
   const shareLink = () => {
     const code = auth?.user ? serverEconomy?.profile?.referralCode : null;
@@ -129,10 +143,12 @@ async function bootstrap(): Promise<void> {
   const ui = new UIManager(uiRoot, economy, { auth, serverEconomy, leaderboard, referrals }, {
     onPlay: () => void startRun(),
     onPauseToggle: () => runner.togglePause(),
-    onRetry: () => void startRun(),
-    onMenu: () => {
+    onRetry: () => void retry(),
+    onMenu: async () => {
+      if (flows.isShowingAd) return;
       // Salir a mitad de partida la abandona (no se guarda)
       if (runner.runState !== 'gameover') runs.discard();
+      else await flows.beforeNextRun('menu');
       allowScreenOff();
       runner.backToReady();
       scenes.set(runner);
@@ -164,12 +180,17 @@ async function bootstrap(): Promise<void> {
       }
     },
     onBattleContinue: () => battle.close(),
+    onReviveWatch: () => void flows.watchRevive(),
+    onReviveSkip: () => flows.skipRevive(),
+    onDouble: () => void flows.watchDouble(),
+    onGift: () => void flows.watchGift(),
     onEquip: async (dino) => {
       const result = await economy.equip(dino.id);
       if (result.ok) ui.toast.show(`✅ ${t('shop.equippedToast', { name: dino.name })}`);
       else if (result.error === 'AUTH_REQUIRED') ui.openAuth('buy');
     },
   }, { assets, getLink: shareLink }, pwa);
+  const flows = new AdFlows({ ads, rewards: adRewards, runner, ui });
 
   // Batallas: el runner avisa al llegar al umbral de monedas
   events.on('battle:trigger', ({ runCoins, sequence, atMs }) => {
@@ -204,6 +225,7 @@ async function bootstrap(): Promise<void> {
     if (economy.mode === 'local') {
       await economy.creditRun(coins);
       ui.refreshGameOverBalance();
+      flows.offerDouble(null, coins);
       return;
     }
     if (!runs.isTracked) {
@@ -219,6 +241,7 @@ async function bootstrap(): Promise<void> {
     }
     battlesWonThisRun = 0;
     ui.gameOverResult(result);
+    if (result?.status === 'finished') flows.offerDouble(runs.lastFinishedRunId, result.awarded);
   });
 
   /** Canjea el bono de bienvenida si el jugador llegó por un link de amigo. */
@@ -235,7 +258,8 @@ async function bootstrap(): Promise<void> {
 
   // Iniciar / cerrar sesión: recargar monedero, dino equipado y bono de referido
   auth?.onChange(async (user) => {
-    await serverEconomy?.refresh();
+    await Promise.all([serverEconomy?.refresh(), adRewards.refresh()]);
+    flows.refreshGift();
     if (user) {
       const name = serverEconomy?.profile?.username;
       if (name) ui.toast.show(t('toast.welcome', { name }));
@@ -260,9 +284,9 @@ async function bootstrap(): Promise<void> {
   });
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'Enter' && e.code !== 'Space') return;
-    if ((e.target as HTMLElement | null)?.closest('input, form') || ui.share.isOpen) return;
+    if ((e.target as HTMLElement | null)?.closest('input, form') || ui.share.isOpen || flows.isShowingAd) return;
     if (runner.runState === 'ready' && ui.isMenuVisible) void startRun();
-    else if (runner.runState === 'gameover' && ui.isGameOverVisible) void startRun();
+    else if (runner.runState === 'gameover' && ui.isGameOverVisible) void retry();
   });
   // Tienda con teclado: flechas para cambiar de dino
   window.addEventListener('keydown', (e) => {
@@ -311,7 +335,7 @@ async function bootstrap(): Promise<void> {
   }, wait);
 
   // Acceso para depurar desde la consola en desarrollo
-  if (import.meta.env.DEV) Object.assign(window, { dinoMau: { game, runner, shop, battle, renderer, audio, economy, ui, auth, runs, quality, pwa } });
+  if (import.meta.env.DEV) Object.assign(window, { dinoMau: { game, runner, shop, battle, renderer, audio, economy, ui, auth, runs, quality, pwa, ads, adRewards, flows } });
 }
 
 bootstrap().catch((err) => {

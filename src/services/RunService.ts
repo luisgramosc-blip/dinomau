@@ -14,6 +14,7 @@ const START_TIMEOUT_MS = 4000;
  */
 export class RunService implements RunTracker {
   private current: StartedRun | null = null;
+  private lastFinished: string | null = null;
 
   constructor(private readonly auth: AuthService) {}
 
@@ -23,6 +24,7 @@ export class RunService implements RunTracker {
    */
   async start(dinoId: DinoId): Promise<StartedRun | null> {
     this.current = null;
+    this.lastFinished = null;
     if (!this.auth.user) return null;
     try {
       const run = await withTimeout(callFunction<StartedRun>('start-run', { dinoId, clientVersion: CLIENT_VERSION }), START_TIMEOUT_MS);
@@ -44,7 +46,7 @@ export class RunService implements RunTracker {
     this.current = null;
     if (!run) return null;
     try {
-      return await callFunction<FinishResult>('finish-run', {
+      const result = await callFunction<FinishResult>('finish-run', {
         runId: run.runId,
         distance: Math.floor(input.distance),
         score: input.score,
@@ -61,9 +63,15 @@ export class RunService implements RunTracker {
           atMs: b.atMs,
         })),
       });
+      if (result.status === 'finished') this.lastFinished = run.runId;
+      return result;
     } catch (err) {
       return { status: 'error', code: err instanceof BackendError ? err.code : 'NETWORK' };
     }
+  }
+
+  get lastFinishedRunId(): string | null {
+    return this.lastFinished;
   }
 
   /** Abandona la partida (p. ej. salir al menú): no se envía. */

@@ -22,6 +22,7 @@ import type { PwaService } from '@/pwa/PwaService';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { MainMenuScreen } from './screens/MainMenuScreen';
 import { PauseScreen } from './screens/PauseScreen';
+import { ReviveScreen } from './screens/ReviveScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ShopScreen } from './screens/ShopScreen';
@@ -44,6 +45,11 @@ export interface UIActions {
   onBuy(dino: DinoDefinition): void;
   onEquip(dino: DinoDefinition): void;
   onBattleContinue(): void;
+  // Anuncios con recompensa
+  onReviveWatch(): void;
+  onReviveSkip(): void;
+  onDouble(): void;
+  onGift(): void;
 }
 
 /** Servicios con servidor; todos null en modo local (sin Supabase). */
@@ -62,7 +68,8 @@ export class UIManager {
   private readonly hud: Hud;
   private readonly pause: PauseScreen;
   private readonly settings: SettingsScreen;
-  private readonly gameOver: GameOverScreen;
+  readonly gameOver: GameOverScreen;
+  readonly revive: ReviveScreen;
   private readonly ranking: LeaderboardScreen;
   private readonly invite: InviteScreen;
   readonly share: ShareSheet;
@@ -92,6 +99,7 @@ export class UIManager {
       onAccount: () => this.openAccount(),
       onInstall: () => void this.install(),
       onUpdate: () => void this.pwa.applyUpdate(),
+      onGift: actions.onGift,
     });
     this.iosInstall = new IosInstallSheet();
     this.shop = new ShopScreen({
@@ -108,7 +116,9 @@ export class UIManager {
       onMenu: actions.onMenu,
       onCreateAccount: () => this.openAuth('save', 'signup'),
       onShare: () => this.lastRun && void this.share.open(this.lastRun),
+      onDouble: actions.onDouble,
     });
+    this.revive = new ReviveScreen({ onWatch: actions.onReviveWatch, onSkip: actions.onReviveSkip });
     this.share = new ShareSheet({ ...shareDeps, toast: (text, ms) => this.toast.show(text, ms) });
     this.battle = new BattleScreen(actions.onBattleContinue);
     this.ranking = new LeaderboardScreen(
@@ -133,7 +143,7 @@ export class UIManager {
     const countdown = new Countdown();
     root.append(
       this.menu.el, this.shop.el, this.ranking.el, this.invite.el, this.hud.el, this.battle.el, countdown.el,
-      this.pause.el, this.gameOver.el, this.share.el, this.settings.el, this.iosInstall.el,
+      this.pause.el, this.revive.el, this.gameOver.el, this.share.el, this.settings.el, this.iosInstall.el,
       ...(this.authScreen ? [this.authScreen.el] : []),
       ...(this.profile ? [this.profile.el] : []),
       this.toast.el,
@@ -149,6 +159,7 @@ export class UIManager {
       hide(this.menu.el, this.pause.el, this.gameOver.el);
     });
     events.on('run:pause', () => show(this.pause.el));
+    events.on('run:reviveOffer', () => this.revive.open());
     // Durante la batalla el HUD del runner se oculta; vuelve con la cuenta regresiva
     events.on('battle:trigger', () => hide(this.hud.el));
     events.on('run:countdown', () => show(this.hud.el));
@@ -157,6 +168,7 @@ export class UIManager {
       const previousBest = this.bestScore;
       LocalStore.recordRun(score, distance);
       const isRecord = score > previousBest;
+      this.revive.close();
       hide(this.hud.el);
       this.gameOver.fill({ score, distance, coins, bestScore: Math.max(previousBest, score), isRecord });
       this.lastRun = { score, distance, coins, isRecord, dino: getDino(this.economy.snapshot.equipped) };
@@ -262,6 +274,13 @@ export class UIManager {
       this.backend.leaderboard?.invalidate();
     }
     this.gameOver.setBalance({ coins: result.coins });
+  }
+
+  /** Monedas extra por anuncio en el fin de partida: actualiza lo ganado y el saldo. */
+  gameOverDoubled(totalEarned: number, coins: number): void {
+    this.gameOver.setEarned(totalEarned);
+    this.gameOver.setBalance({ coins });
+    if (this.lastRun) this.lastRun = { ...this.lastRun, coins: totalEarned };
   }
 
   /** Tras acreditar las monedas de la partida (modo local), muestra el saldo nuevo. */

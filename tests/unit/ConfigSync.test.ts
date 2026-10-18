@@ -4,6 +4,7 @@ import { DINOS } from '@/config/dinos.config';
 import { GAME_CONFIG } from '@/config/game.config';
 import { ABILITY_CONFIG, STAT_EFFECTS } from '@/config/dinos.config';
 import { REFERRAL_CONFIG } from '@/config/referral.config';
+import { ADS_CONFIG } from '@/config/ads.config';
 import { readServerConfig, readServerDinoPrices } from './serverConfig';
 
 /**
@@ -29,6 +30,15 @@ describe('configuración cliente ↔ servidor', () => {
     for (const k of ['welcomeBonus', 'inviterBonus', 'inviterBonusEnabled', 'claimWindowHours'] as const) {
       expect(server[k], k).toBe(REFERRAL_CONFIG[k]);
     }
+  });
+
+  it('topes de las recompensas por anuncio', () => {
+    const server = readServerConfig<Record<string, number>>('ads');
+    expect(server.doubleCoinsDailyLimit).toBe(ADS_CONFIG.doubleCoins.dailyLimit);
+    expect(server.doubleCoinsMaxBonus).toBe(ADS_CONFIG.doubleCoins.maxBonus);
+    expect(server.doubleCoinsWindowMinutes).toBe(ADS_CONFIG.doubleCoins.windowMinutes);
+    expect(server.dailyGiftCoins).toBe(ADS_CONFIG.dailyGift.coins);
+    expect(server.dailyGiftDailyLimit).toBe(ADS_CONFIG.dailyGift.dailyLimit);
   });
 
   it('curva de velocidad y límites del antitrampas', () => {

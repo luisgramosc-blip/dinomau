@@ -51,6 +51,7 @@ export class SettingsScreen {
             ${LANGUAGES.map((l) => `<button data-lang="${l.code}" aria-pressed="${l.code === getLanguage()}">${l.label}</button>`).join('')}
           </div>
           <button class="btn btn--primary" data-action="close">${t('settings.close')}</button>
+          <a class="settings__privacy" href="/privacy.html" target="_blank" rel="noopener">${t('settings.privacy')}</a>
         </div>
       </section>
     `);

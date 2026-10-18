@@ -1,8 +1,10 @@
+import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath, URL } from 'node:url';
 import { VitePWA } from 'vite-plugin-pwa';
+import { legalPages } from './scripts/vite-plugin-legal.ts';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -20,6 +22,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    legalPages(loadEnv(mode, process.cwd(), 'VITE_')),
     VitePWA({
       // Con una versión nueva el juego muestra un aviso y se actualiza al pulsarlo
       // (nunca a mitad de partida). El registro lo hace src/pwa/PwaService.ts.
@@ -57,7 +60,7 @@ export default defineConfig({
           },
         ],
         // Las llamadas a Supabase nunca se sirven de caché
-        navigateFallbackDenylist: [/^\/(rest|auth|functions)\//],
+        navigateFallbackDenylist: [/^\/(rest|auth|functions)\//, /^\/(privacy\.html|ads\.txt)$/],
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
@@ -68,4 +71,4 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     environment: 'node',
   },
-});
+}));

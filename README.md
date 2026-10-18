@@ -7,7 +7,7 @@ Endless runner 3D ambientado en la era jurásica. Corre por la selva, esquiva tr
 - **Backend:** Supabase (Auth, Postgres con RLS, Edge Functions)
 - **Despliegue:** Vercel (frontend) + Supabase (backend)
 
-> Estado: **Fase 8 completada (juego terminado)**. Funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, los referidos con bonos, la imagen para historias, y el juego se instala como app (PWA) y funciona sin conexión.
+> Estado: **Fase 9 completada (anuncios)**. Funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, los referidos con bonos, la imagen para historias, el juego se instala como app (PWA) y funciona sin conexión, y gana dinero con anuncios (revivir, x2 monedas, regalo diario y anuncios entre partidas), por ahora en modo de prueba.
 >
 > 👉 Para publicarlo en internet sigue **[DEPLOY.md](DEPLOY.md)** (guía paso a paso, sin conocimientos técnicos).
 >
@@ -133,6 +133,7 @@ dinoMau/
 │   │   ├── rivals.config.ts       # Escalera de rivales por progreso
 │   │   ├── powerups.config.ts     # Duración y efecto de imán, escudo, x2, súper salto
 │   │   ├── referral.config.ts     # Solo para mostrar en UI (el servidor es la autoridad)
+│   │   ├── ads.config.ts          # Anuncios: revivir, x2, regalo diario, ritmo entre partidas
 │   │   └── assets.manifest.ts     # clave → ruta GLB/audio + fábrica placeholder de respaldo
 │   │
 │   ├── core/                      # Motor genérico, sin lógica de dinoMau
@@ -205,6 +206,7 @@ dinoMau/
 │   │   ├── LeaderboardService.ts
 │   │   └── ReferralService.ts
 │   │
+│   ├── ads/                       # AdService, AdPacer, AdFlows y redes (Mock, AdSense)
 │   ├── share/
 │   │   ├── StoryImage.ts          # Canvas 1080×1920 para historias
 │   │   └── ShareService.ts        # Web Share API + fallbacks + WhatsApp/Facebook/X
@@ -218,14 +220,17 @@ dinoMau/
 ├── supabase/
 │   ├── config.toml
 │   ├── migrations/
-│   │   └── 20261018000000_init.sql   # ✅ Esquema completo (incluido en esta entrega)
+│   │   ├── 20261018000000_init.sql   # ✅ Esquema completo (incluido en esta entrega)
+│   │   ├── 20261019000000_runs_and_ranking.sql
+│   │   └── 20261020000000_ads.sql    # Recompensas por anuncio con topes diarios
 │   ├── seed.sql                      # Usuarios de prueba para desarrollo
 │   └── functions/
 │       ├── _shared/                  # cors.ts, auth.ts (getUser), config.ts, validation.ts
 │       ├── start-run/                # Abre una partida y devuelve la semilla
 │       ├── finish-run/               # Valida plausibilidad, aplica batallas, acredita monedas
 │       ├── purchase-dino/            # Compra con verificación de saldo
-│       └── claim-referral/           # Bono de bienvenida (email verificado, una sola vez)
+│       ├── claim-referral/           # Bono de bienvenida (email verificado, una sola vez)
+│       └── ad-reward/                # Monedas por anuncio (x2 y regalo diario, con topes)
 │
 └── tests/
     ├── unit/                      # Vitest: pool, carriles, resolver de batalla, validación
@@ -416,6 +421,30 @@ La lógica de las Edge Functions vive en `supabase/functions/_shared/handlers.ts
 - **Pantallas probadas:** iPhone SE, iPhone 15 Pro Max, Pixel 7, Galaxy S9+, iPad y móvil en horizontal (menú, tienda, partida, pausa y fin de partida), sin elementos fuera de pantalla.
 - **Iconos:** se generan desde `design/icon-source.svg` con `node scripts/generate-icons.mjs`.
 
+### Anuncios (Fase 9)
+
+Todo se configura en `src/config/ads.config.ts`; la red de anuncios se elige con `VITE_ADS_PROVIDER`:
+
+| Valor | Qué hace |
+|---|---|
+| `mock` (por defecto sin AdSense) | Anuncio de prueba propio: pantalla "ANUNCIO DE PRUEBA" con cuenta atrás |
+| `adsense` (por defecto con `VITE_ADSENSE_CLIENT`) | Google AdSense para juegos (H5 Games Ads / Ad Placement API) |
+| `none` | Sin anuncios: los botones no aparecen |
+
+| Anuncio | Dónde | Reglas (por defecto) |
+|---|---|---|
+| 🎬 Revivir | Al chocar, modal "¿Revivir?" con 6 s para decidir | 1 vez por partida, desde 150 m; vuelve invulnerable 2,5 s sin obstáculos cercanos y con cuenta atrás |
+| 🎬 x2 monedas | Fin de partida | Desde 20 monedas, extra máximo 2.000, 5 al día, dentro de los 15 min tras la partida, una vez por partida |
+| 🎁 Regalo diario | Menú | 150 monedas, 3 al día (día UTC) |
+| Entre partidas | Al pulsar *Revancha* o *Menú* tras perder | Nunca en las 2 primeras partidas; máximo 1 cada 3 partidas y cada 3 min; 90 s de respiro tras uno con recompensa |
+
+- **Arquitectura** (`src/ads/`): `AdProvider` (interfaz de una red: `MockAdProvider`, `AdSenseProvider`, `NoAdProvider`), `AdService` (único punto para mostrar anuncios; silencia el juego con `ad:start`/`ad:end`), `AdPacer` (ritmo de los anuncios entre partidas, lógica pura) y `AdFlows` (une anuncio, recompensa, runner y UI). Para añadir otra red (AdMob en una app, el SDK de un portal) basta con otro `AdProvider`.
+- **Monedas por anuncio en el servidor**: la Edge Function `ad-reward` llama a `claim_ad_reward` (migración `20261020000000_ads.sql`), que aplica los topes diarios con la fila del perfil bloqueada, comprueba que la partida es del jugador, terminó bien y es reciente, y que no se duplicó antes. Todo queda en `ad_rewards` y en `coin_ledger` (`ad_double`, `ad_gift`).
+- **Límite conocido:** un juego web no puede demostrar al servidor que el anuncio se vio entero (AdSense para juegos no tiene verificación servidor a servidor, AdMob sí). Por eso los topes: quien haga trampa gana como mucho lo de un día normal (750 monedas de regalo + 5 duplicados).
+- Revivir no da monedas, así que no pasa por el servidor; la partida sigue con el mismo id, tiempo y puntaje, y el antitrampas la valida igual.
+- **Páginas legales**: `/privacy.html` (desde `legal/privacy.html` con `VITE_CONTACT_EMAIL`) y `/ads.txt` (con `VITE_ADSENSE_CLIENT`) las genera `scripts/vite-plugin-legal.ts`. El enlace a la política está en *Ajustes*. El aviso de cookies para Europa es el de Google (se activa en AdSense, sin código).
+- Pasos para activar AdSense: [DEPLOY.md → Paso 8](DEPLOY.md#paso-8--activar-los-anuncios-reales-google-adsense).
+
 ---
 
 ## 5. Desplegar (Vercel + Supabase)
@@ -433,6 +462,7 @@ supabase functions deploy start-run
 supabase functions deploy finish-run
 supabase functions deploy purchase-dino
 supabase functions deploy claim-referral
+supabase functions deploy ad-reward
 ```
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` se inyectan solas en las Edge Functions. No hace falta definirlas como secretos.
@@ -490,3 +520,4 @@ Desde el primer día el juego funciona con mallas generadas por código (`src/as
 | 6 | Referidos y bonos | ✅ |
 | 7 | Imagen para historias y compartir | ✅ |
 | 8 | PWA, optimización y pruebas en móvil | ✅ |
+| 9 | Anuncios: revivir, x2 monedas, regalo diario, entre partidas; topes en servidor | ✅ |

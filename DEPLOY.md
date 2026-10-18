@@ -35,14 +35,17 @@ Vas a usar dos servicios gratuitos:
    [`supabase/migrations/20261018000000_init.sql`](supabase/migrations/20261018000000_init.sql),
    pulsa el botón **Copy raw file**, pégalo en el editor y pulsa **Run**. Debe decir *Success*.
 3. Repite con
-   [`supabase/migrations/20261019000000_runs_and_ranking.sql`](supabase/migrations/20261019000000_runs_and_ranking.sql).
+   [`supabase/migrations/20261019000000_runs_and_ranking.sql`](supabase/migrations/20261019000000_runs_and_ranking.sql)
+   y después con
+   [`supabase/migrations/20261020000000_ads.sql`](supabase/migrations/20261020000000_ads.sql).
 
-   ⚠️ Respeta el orden: primero `init`, luego `runs_and_ranking`.
+   ⚠️ Respeta el orden: `init`, luego `runs_and_ranking` y por último `ads`.
 
 ## Paso 3 — Subir las funciones del servidor (Edge Functions)
 
-Son 4 funciones que validan las partidas, las compras y los referidos para que nadie
-pueda hacer trampas: `start-run`, `finish-run`, `purchase-dino` y `claim-referral`.
+Son 5 funciones que validan las partidas, las compras, los referidos y las monedas por
+anuncio para que nadie pueda hacer trampas: `start-run`, `finish-run`, `purchase-dino`,
+`claim-referral` y `ad-reward`.
 Hay dos formas:
 
 ### Opción A (recomendada): que Claude lo haga por ti
@@ -66,11 +69,12 @@ npx supabase functions deploy start-run --use-api
 npx supabase functions deploy finish-run --use-api
 npx supabase functions deploy purchase-dino --use-api
 npx supabase functions deploy claim-referral --use-api
+npx supabase functions deploy ad-reward --use-api
 ```
 
 (Si no hiciste el Paso 2 a mano, `npx supabase db push` crea las tablas.)
 
-En **Edge Functions** deben aparecer las 4 funciones.
+En **Edge Functions** deben aparecer las 5 funciones.
 
 ## Paso 4 — Configurar el registro de usuarios
 
@@ -102,6 +106,11 @@ En Supabase → **Authentication**:
    | `VITE_SUPABASE_URL` | tu *Project URL* del Paso 1 |
    | `VITE_SUPABASE_ANON_KEY` | tu *anon public key* del Paso 1 |
    | `VITE_PUBLIC_SITE_URL` | `https://dinomau.vercel.app` (cámbialo si Vercel te da otro nombre) |
+   | `VITE_CONTACT_EMAIL` | el correo de contacto que saldrá en la política de privacidad |
+
+   Mientras no tengas AdSense, el juego muestra **anuncios de prueba** (pantalla
+   "ANUNCIO DE PRUEBA"). Si prefieres que no salga ninguno, añade también
+   `VITE_ADS_PROVIDER` = `none`.
 
 4. Pulsa **Deploy**. En 1–2 minutos tendrás la dirección del juego.
 
@@ -120,6 +129,49 @@ En Supabase → **Authentication**:
 - [ ] En **Invitar** copia tu link `…/r/CODIGO`, ábrelo en otro navegador y crea otra cuenta:
       tras confirmar el email la nueva cuenta recibe **500 monedas**, y tú **250** cuando tu amigo termine su primera partida.
 - [ ] Android (Chrome): botón **📲 Instalar app** en el menú. iPhone (Safari): *Compartir → Añadir a pantalla de inicio*.
+- [ ] Con la cuenta: **🎁 Regalo** del menú da 150 monedas (3 al día); al chocar sale **¿Revivir?**;
+      en el fin de partida, **🎬 x2 monedas** duplica lo ganado.
+- [ ] `https://tu-dominio/privacy.html` muestra la política de privacidad con tu correo.
+
+---
+
+## Paso 8 — Activar los anuncios reales (Google AdSense)
+
+Google solo aprueba sitios con **dominio propio** (no acepta `vercel.app`), así que
+primero sigue *"Cuando compres un dominio"* (más abajo).
+
+1. Crea la cuenta en <https://adsense.google.com> con tu dominio. Google revisa el sitio;
+   puede tardar de unos días a unas semanas.
+2. Solicita el acceso a **anuncios para juegos H5** (*H5 Games Ads*): Google lo da por
+   solicitud. Los pasos actuales están en su
+   [documentación de Ad Placement API](https://developers.google.com/ad-placement).
+3. Copia tu **ID de editor** (AdSense → *Cuenta → Información de la cuenta*), con la forma
+   `ca-pub-1234567890123456`.
+4. En Vercel añade:
+
+   | Nombre | Valor |
+   |---|---|
+   | `VITE_ADSENSE_CLIENT` | tu `ca-pub-…` |
+   | `VITE_ADSENSE_TEST` | `on` (anuncios de prueba de Google mientras lo revisas) |
+
+   y borra `VITE_ADS_PROVIDER` si la habías puesto. Haz *Redeploy*.
+5. Comprueba que `https://tudominio.com/ads.txt` muestra una línea `google.com, pub-…`.
+   El juego la genera solo; AdSense la pide para pagarte.
+6. **Aviso de cookies (Europa):** AdSense → *Privacidad y mensajes → RGPD* → crea el mensaje
+   y publícalo. Google lo muestra solo dentro del juego; es obligatorio para jugadores de
+   Europa y Reino Unido.
+7. Cuando veas que todo funciona, cambia `VITE_ADSENSE_TEST` a vacío y haz *Redeploy*:
+   empiezan los anuncios reales.
+
+> ⚠️ **Nunca hagas clic en tus propios anuncios reales** ni pidas a amigos que lo hagan:
+> Google cierra la cuenta. Para probar usa `VITE_ADSENSE_TEST=on`.
+>
+> 👶 **Si el juego es para niños**, díselo a Google: en AdSense marca el sitio como
+> *dirigido a menores* (solo anuncios no personalizados). Así lo exigen las leyes de
+> protección de menores (COPPA en EE. UU.).
+
+Para cambiar cuántos anuncios salen, cuántas monedas dan o cada cuánto, edita
+`src/config/ads.config.ts` (y los topes de monedas también en la migración `ads`).
 
 ---
 

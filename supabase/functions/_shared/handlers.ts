@@ -38,6 +38,7 @@ export interface Db {
   /** Datos de Auth: si el correo está verificado y el código de referido guardado al registrarse. */
   getAuthUser(userId: string): Promise<{ emailVerified: boolean; referralCode: string | null } | null>;
   claimReferral(userId: string, code: string): Promise<number>;
+  claimAdReward(userId: string, kind: 'double' | 'gift', runId: string | null): Promise<AdRewardOutcome>;
   now(): Date;
 }
 
@@ -50,6 +51,12 @@ export interface ReferralConfig {
   maxInviterBonusesPerDay: number;
 }
 
+export interface AdRewardOutcome {
+  coins: number;
+  bonus: number;
+  remaining: number;
+}
+
 export type HandlerResult = { status: number; body: Record<string, unknown> };
 
 const ok = (body: Record<string, unknown>): HandlerResult => ({ status: 200, body });
@@ -60,6 +67,7 @@ const fail = (status: number, error: string, extra: Record<string, unknown> = {}
 const KNOWN_DB_ERRORS = [
   'INSUFFICIENT_COINS', 'ALREADY_OWNED', 'DINO_NOT_FOUND', 'DINO_NOT_OWNED', 'RUN_NOT_OPEN', 'PROFILE_NOT_FOUND',
   'INVALID_CODE', 'SELF_REFERRAL', 'ALREADY_REFERRED', 'CLAIM_WINDOW_EXPIRED',
+  'AD_LIMIT_REACHED', 'ALREADY_CLAIMED', 'RUN_NOT_ELIGIBLE', 'INVALID_KIND',
 ] as const;
 
 export function dbErrorCode(err: unknown): string | null {
@@ -181,6 +189,32 @@ export async function handleClaimReferral(db: Db, userId: string, body: unknown)
   } catch (err) {
     const code = dbErrorCode(err);
     if (code) return fail(409, code);
+    throw err;
+  }
+}
+
+// --- ad-reward ----------------------------------------------------------------
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Monedas por ver un anuncio: `gift` (regalo diario) o `double` (duplicar una
+ * partida terminada). Los topes diarios, la ventana de tiempo y que cada
+ * partida se duplique una sola vez los aplica `claim_ad_reward` en SQL.
+ */
+export async function handleAdReward(db: Db, userId: string, body: unknown): Promise<HandlerResult> {
+  const b = (body ?? {}) as { kind?: unknown; runId?: unknown };
+  if (b.kind !== 'double' && b.kind !== 'gift') return fail(400, 'INVALID_PAYLOAD');
+  let runId: string | null = null;
+  if (b.kind === 'double') {
+    if (typeof b.runId !== 'string' || !UUID.test(b.runId)) return fail(400, 'INVALID_PAYLOAD');
+    runId = b.runId;
+  }
+  try {
+    return ok({ ...(await db.claimAdReward(userId, b.kind, runId)) });
+  } catch (err) {
+    const code = dbErrorCode(err);
+    if (code) return fail(code === 'AD_LIMIT_REACHED' ? 429 : 409, code);
     throw err;
   }
 }

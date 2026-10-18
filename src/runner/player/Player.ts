@@ -184,6 +184,22 @@ export class Player {
     this.visual.setState('hit');
   }
 
+  /** Vuelve a la vida tras ver el anuncio de revivir: de pie en su carril y parpadeando. */
+  revive(invulnerableSeconds: number): void {
+    this.dead = false;
+    this.x = laneX(this.lane);
+    this.previousLane = this.lane;
+    this.y = this.vy = 0;
+    this.grounded = true;
+    this.rolling = this.fastFall = false;
+    this.rollTimer = this.jumpBuffer = 0;
+    this.airJumpsLeft = this.maxAirJumps;
+    this.visual.root.visible = true;
+    this.visual.setState('run');
+    this.makeInvulnerable(invulnerableSeconds);
+    this.syncTransform();
+  }
+
   /** Muestra u oculta la burbuja del escudo. */
   setShieldVisible(visible: boolean): void {
     this.shieldBubble.visible = visible;

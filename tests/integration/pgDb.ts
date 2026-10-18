@@ -46,6 +46,10 @@ export function pgDb(pool: pg.Pool, clock: { now: Date }): Db {
       const { rows } = await pool.query('select claim_referral($1, $2) as coins', [userId, code]);
       return Number(rows[0].coins);
     },
+    async claimAdReward(userId, kind, runId) {
+      const { rows } = await pool.query('select claim_ad_reward($1, $2, $3) as r', [userId, kind, runId]);
+      return rows[0].r;
+    },
     now: () => clock.now,
   };
 }

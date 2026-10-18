@@ -25,6 +25,8 @@ export interface RunTracker {
   readonly isTracked: boolean;
   finish(input: RunReportInput): Promise<FinishResult | null>;
   discard(): void;
+  /** Id de la última partida aceptada por el servidor (para duplicar sus monedas). */
+  readonly lastFinishedRunId: string | null;
 }
 
 /** Modo local: las partidas no se registran en ningún servidor. */
@@ -33,4 +35,5 @@ export const localRunTracker: RunTracker = {
   isTracked: false,
   finish: async () => null,
   discard: () => {},
+  lastFinishedRunId: null,
 };

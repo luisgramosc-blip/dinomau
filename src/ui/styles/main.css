@@ -1083,3 +1083,120 @@ body.ready .splash { opacity: 0; pointer-events: none; }
   0%, 30% { transform: rotate(-90deg); }
   60%, 100% { transform: rotate(0deg); }
 }
+
+/* --- Anuncios ------------------------------------------------------------------ */
+/* Botón de recompensa (ver anuncio): dorado, para que se distinga de "Revancha" */
+.btn--reward {
+  width: 100%;
+  margin: 0 0 12px;
+  background: linear-gradient(var(--coin), var(--lava-light));
+  color: var(--ink);
+  font-size: 19px;
+  min-height: 48px;
+}
+.btn--reward:disabled { opacity: 0.6; }
+
+.chip--gift {
+  border: 2px solid var(--ink);
+  background: linear-gradient(var(--coin), var(--lava-light));
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 16px;
+  gap: 8px;
+}
+.chip--gift small { font: 800 12px var(--font-body); opacity: 0.75; }
+.chip--gift:disabled { opacity: 0.6; }
+
+/* ¿Revivir? */
+.card--revive { text-align: center; }
+.card--revive h2 { margin-bottom: 8px; }
+.revive__ring {
+  --p: 1;
+  width: 96px;
+  height: 96px;
+  margin: 4px auto 10px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--coin) calc(var(--p) * 360deg), rgba(255, 255, 255, 0.12) 0);
+}
+.revive__ring span {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  font: 400 38px var(--font-display);
+}
+.revive__hint { margin: 0 0 14px; font-weight: 600; }
+.btn--revive { font-size: 24px; }
+
+.settings__privacy {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+  color: var(--sand);
+  font-weight: 800;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* Anuncio de prueba (proveedor 'mock') */
+.mock-ad {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: calc(14px + var(--safe-top)) 16px calc(20px + var(--safe-bottom));
+  background: #101820;
+  color: #fff;
+  font-family: var(--font-body);
+}
+.mock-ad__top { display: flex; justify-content: space-between; align-items: center; }
+.mock-ad__badge {
+  font: 800 12px var(--font-body);
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #ffd23f;
+  color: #101820;
+}
+.mock-ad__close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+.mock-ad__close[hidden] { display: none; }
+.mock-ad__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+.mock-ad__art { font-size: 96px; }
+.mock-ad__title { margin: 0; font: 400 28px var(--font-display); }
+.mock-ad__text { margin: 0; max-width: 32ch; opacity: 0.8; }
+.mock-ad__bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.mock-ad__bar span { display: block; height: 100%; background: #ffd23f; transform: scaleX(0); transform-origin: left; }
+.mock-ad__timer { margin: 10px 0 0; text-align: center; font-weight: 800; min-height: 1.4em; }
+.mock-ad--done .mock-ad__close { border-color: #ffd23f; background: #ffd23f; color: #101820; }
+
+/* Pantallas bajas (iPhone SE…): fin de partida más compacto para que quepa el botón x2 */
+@media (max-height: 680px) {
+  .card--gameover { padding: 16px 18px; }
+  .card--gameover h2 { font-size: 32px; margin-bottom: 6px; }
+  .card--gameover .big-score { font-size: 48px; }
+  .card--gameover .stats { gap: 6px; margin-bottom: 14px; }
+  .card--gameover .stats div { padding: 6px 12px; }
+  .card--gameover .btn--reward { min-height: 44px; margin-bottom: 10px; }
+}

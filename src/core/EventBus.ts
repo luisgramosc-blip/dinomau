@@ -50,6 +50,15 @@ export interface GameEvents {
   'battle:phase': { kind: 'attack' | 'defend' };
   'battle:hit': { target: 'player' | 'rival'; amount: number; grade?: DodgeGrade; source?: 'tap' | 'counter' };
   'battle:finished': BattleResult;
+
+  // --- Anuncios ---
+  /** Chocó y puede revivir viendo un anuncio (el runner queda congelado). */
+  'run:reviveOffer': void;
+  /** Volvió a la partida tras revivir. */
+  'run:revived': void;
+  /** Empieza / termina un anuncio (el audio se silencia mientras tanto). */
+  'ad:start': void;
+  'ad:end': void;
 }
 
 type Handler<T> = (payload: T) => void;
