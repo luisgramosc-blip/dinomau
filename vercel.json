@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/r/:code", "destination": "/index.html" },
+    { "source": "/((?!assets/|static/|icons/).*)", "destination": "/index.html" }
+  ]
+}

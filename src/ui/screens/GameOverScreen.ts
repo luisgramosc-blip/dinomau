@@ -1,0 +1,65 @@
+import { formatNumber, t } from '@/i18n/i18n';
+import { $, hide, html, show } from '../dom';
+
+export interface RunSummary {
+  score: number;
+  distance: number;
+  coins: number;
+  bestScore: number;
+  isRecord: boolean;
+}
+
+export interface WalletSummary {
+  coins: number;
+}
+
+/**
+ * Fin de partida: puntaje, distancia, monedas, récord y acciones.
+ * El botón "Compartir" queda oculto hasta la Fase 7 (imagen para historias).
+ */
+export class GameOverScreen {
+  readonly el: HTMLElement;
+
+  constructor(actions: { onRetry(): void; onMenu(): void }) {
+    this.el = html(/* html */ `
+      <section class="screen screen--modal hidden">
+        <div class="card card--gameover">
+          <p class="record-banner hidden" data-ref="record">🏆 ${t('gameover.newRecord')}</p>
+          <h2>${t('gameover.title')}</h2>
+          <p class="big-score" data-ref="score">0</p>
+          <p class="earned"><span class="coin-icon"></span><b data-ref="earned"></b><small data-ref="balance"></small></p>
+          <dl class="stats">
+            <div><dt>${t('gameover.distance')}</dt><dd data-ref="distance">0</dd></div>
+            <div><dt>${t('gameover.coins')}</dt><dd data-ref="coins">0</dd></div>
+            <div><dt>${t('gameover.best')}</dt><dd data-ref="best">0</dd></div>
+          </dl>
+          <button class="btn btn--primary" data-action="retry">${t('gameover.retry')}</button>
+          <div class="btn-row">
+            <button class="btn btn--ghost" data-action="menu">${t('gameover.menu')}</button>
+            <button class="btn btn--ghost hidden" data-action="share">${t('gameover.share')}</button>
+          </div>
+        </div>
+      </section>
+    `);
+    $(this.el, '[data-action="retry"]').addEventListener('click', actions.onRetry);
+    $(this.el, '[data-action="menu"]').addEventListener('click', actions.onMenu);
+  }
+
+  /** Saldo total tras acreditar las monedas de la partida. */
+  setBalance(wallet: WalletSummary): void {
+    $(this.el, '[data-ref="balance"]').textContent = t('gameover.balance', { value: formatNumber(wallet.coins) });
+  }
+
+  fill(run: RunSummary): void {
+    $(this.el, '[data-ref="earned"]').textContent = t('gameover.earned', { value: formatNumber(run.coins) });
+    $(this.el, '[data-ref="balance"]').textContent = '';
+    $(this.el, '[data-ref="score"]').textContent = formatNumber(run.score);
+    $(this.el, '[data-ref="distance"]').textContent = t('units.meters', { value: formatNumber(run.distance) });
+    $(this.el, '[data-ref="coins"]').textContent = formatNumber(run.coins);
+    $(this.el, '[data-ref="best"]').textContent = formatNumber(run.bestScore);
+    const banner = $(this.el, '[data-ref="record"]');
+    if (run.isRecord) show(banner);
+    else hide(banner);
+    this.el.querySelector('.card')!.classList.toggle('card--record', run.isRecord);
+  }
+}
