@@ -51,7 +51,8 @@ insert into public.game_config (key, value) values
      "inviterBonusEnabled": true,
      "inviterBonus": 250,
      "requireEmailVerified": true,
-     "claimWindowHours": 72
+     "claimWindowHours": 72,
+     "maxInviterBonusesPerDay": 20
    }'),
   ('anticheat', '{
      "maxCoinsPerSecond": 20,
@@ -333,6 +334,10 @@ begin
   if v_inviter = p_invitee then
     raise exception 'SELF_REFERRAL' using errcode = 'P0001';
   end if;
+  -- Sin referidos cruzados (A invita a B y B invita a A)
+  if exists (select 1 from public.referrals where inviter_id = p_invitee and invitee_id = v_inviter) then
+    raise exception 'SELF_REFERRAL' using errcode = 'P0001';
+  end if;
 
   select created_at into v_created from public.profiles where id = p_invitee;
   if v_created < now() - make_interval(hours => (cfg ->> 'claimWindowHours')::int) then
@@ -420,11 +425,15 @@ begin
   end if;
 
   -- Bono al invitador en la primera partida finalizada del referido
+  -- (con tope diario por invitador para frenar granjas de cuentas)
   if (v_cfg ->> 'inviterBonusEnabled')::boolean then
     select * into v_ref from public.referrals
      where invitee_id = v_run.user_id and inviter_bonus_granted_at is null
      for update;
-    if v_ref.id is not null then
+    if v_ref.id is not null and (
+      select count(*) from public.referrals
+       where inviter_id = v_ref.inviter_id and inviter_bonus_granted_at > now() - interval '24 hours'
+    ) < coalesce((v_cfg ->> 'maxInviterBonusesPerDay')::int, 1000000) then
       update public.referrals
          set inviter_bonus = (v_cfg ->> 'inviterBonus')::int, inviter_bonus_granted_at = now()
        where id = v_ref.id;

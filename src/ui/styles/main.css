@@ -373,7 +373,10 @@ body.ready .splash { opacity: 0; pointer-events: none; }
   padding: 8px 18px;
   border-radius: 999px;
   font-size: 20px;
-  white-space: nowrap;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  line-height: 1.25;
 }
 .toast--in { animation: toast-in 0.25s ease-out; }
 @keyframes toast-in {
@@ -970,3 +973,26 @@ body.ready .splash { opacity: 0; pointer-events: none; }
 .ranking__empty { padding: 24px 8px; opacity: 0.8; }
 .ranking__me { margin: 10px 0 0; font-weight: 800; font-size: 14px; color: var(--lava-light); }
 .ranking__me:empty { display: none; }
+
+/* --- Invitar amigos ------------------------------------------------------------ */
+.screen--invite { justify-content: flex-start; gap: 12px; }
+.invite { width: min(420px, 100%); text-align: left; display: flex; flex-direction: column; gap: 10px; }
+.invite__pitch { margin: 0; font-size: 15px; line-height: 1.4; }
+.invite__pitch b { color: var(--coin); }
+.invite__link { display: flex; gap: 8px; margin-bottom: 10px; }
+.invite__link input {
+  flex: 1;
+  min-width: 0;
+  font: 700 14px var(--font-body);
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid rgba(246, 227, 192, 0.3);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  user-select: all;
+  -webkit-user-select: all;
+}
+.invite__link .btn { width: auto; padding: 8px 16px; font-size: 18px; }
+.btn--whatsapp { width: 100%; background: #25d366; color: #0b2e17; }
+.invite__stats { margin: 14px 0 0; }
+.invite__notice { margin: 0; font-weight: 800; color: var(--lava-light); }

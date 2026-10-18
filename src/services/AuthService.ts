@@ -4,6 +4,8 @@ import { SITE_URL } from './supabaseClient';
 export interface AuthUser {
   id: string;
   email: string | null;
+  /** Código de referido guardado en los metadatos al registrarse (si lo hubo). */
+  referralCode: string | null;
 }
 
 export type AuthResult = { ok: true; needsConfirmation?: boolean } | { ok: false; error: AuthErrorCode };
@@ -41,7 +43,14 @@ export class AuthService {
   }
 
   private setSession(session: Session | null): void {
-    const next = session ? { id: session.user.id, email: session.user.email ?? null } : null;
+    const meta = session?.user.user_metadata as { referral_code?: unknown } | undefined;
+    const next = session
+      ? {
+          id: session.user.id,
+          email: session.user.email ?? null,
+          referralCode: typeof meta?.referral_code === 'string' ? meta.referral_code : null,
+        }
+      : null;
     if (next?.id === this.current?.id) return;
     this.current = next;
     this.listeners.forEach((l) => l(next));

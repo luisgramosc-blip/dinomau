@@ -58,6 +58,18 @@ export function supabaseDb(sb: SupabaseClient): Db {
     async purchaseDino(userId, dinoId) {
       return Number(unwrap(await sb.rpc('purchase_dino', { p_user: userId, p_dino: dinoId })));
     },
+    async getAuthUser(userId) {
+      const { data, error } = await sb.auth.admin.getUserById(userId);
+      if (error || !data.user) return null;
+      const u = data.user;
+      // Google y otros proveedores OAuth ya verifican el correo
+      const verified = !!u.email_confirmed_at || (u.app_metadata?.provider ?? 'email') !== 'email';
+      const code = typeof u.user_metadata?.referral_code === 'string' ? u.user_metadata.referral_code : null;
+      return { emailVerified: verified, referralCode: code };
+    },
+    async claimReferral(userId, code) {
+      return Number(unwrap(await sb.rpc('claim_referral', { p_invitee: userId, p_code: code })));
+    },
     now: () => new Date(),
   };
 }

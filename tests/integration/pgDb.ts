@@ -36,6 +36,16 @@ export function pgDb(pool: pg.Pool, clock: { now: Date }): Db {
       const { rows } = await pool.query('select purchase_dino($1, $2) as coins', [userId, dinoId]);
       return Number(rows[0].coins);
     },
+    async getAuthUser(userId) {
+      const { rows } = await pool.query('select email_confirmed_at, raw_user_meta_data from auth.users where id = $1', [userId]);
+      if (!rows[0]) return null;
+      const code = rows[0].raw_user_meta_data?.referral_code;
+      return { emailVerified: !!rows[0].email_confirmed_at, referralCode: typeof code === 'string' ? code : null };
+    },
+    async claimReferral(userId, code) {
+      const { rows } = await pool.query('select claim_referral($1, $2) as coins', [userId, code]);
+      return Number(rows[0].coins);
+    },
     now: () => clock.now,
   };
 }

@@ -35,7 +35,19 @@ export interface Db {
   startRun(userId: string, dinoId: string, clientVersion: string | null): Promise<{ runId: string; seed: number }>;
   finalizeRun(args: FinalizeArgs): Promise<{ status: string; coins?: number; awarded?: number; newRecord?: boolean }>;
   purchaseDino(userId: string, dinoId: string): Promise<number>;
+  /** Datos de Auth: si el correo está verificado y el código de referido guardado al registrarse. */
+  getAuthUser(userId: string): Promise<{ emailVerified: boolean; referralCode: string | null } | null>;
+  claimReferral(userId: string, code: string): Promise<number>;
   now(): Date;
+}
+
+export interface ReferralConfig {
+  welcomeBonus: number;
+  inviterBonusEnabled: boolean;
+  inviterBonus: number;
+  requireEmailVerified: boolean;
+  claimWindowHours: number;
+  maxInviterBonusesPerDay: number;
 }
 
 export type HandlerResult = { status: number; body: Record<string, unknown> };
@@ -47,6 +59,7 @@ const fail = (status: number, error: string, extra: Record<string, unknown> = {}
 /** Errores de negocio lanzados con `raise exception 'CODIGO'` en las funciones SQL. */
 const KNOWN_DB_ERRORS = [
   'INSUFFICIENT_COINS', 'ALREADY_OWNED', 'DINO_NOT_FOUND', 'DINO_NOT_OWNED', 'RUN_NOT_OPEN', 'PROFILE_NOT_FOUND',
+  'INVALID_CODE', 'SELF_REFERRAL', 'ALREADY_REFERRED', 'CLAIM_WINDOW_EXPIRED',
 ] as const;
 
 export function dbErrorCode(err: unknown): string | null {
@@ -131,6 +144,40 @@ export async function handlePurchase(db: Db, userId: string, body: unknown): Pro
   try {
     const coins = await db.purchaseDino(userId, b.dinoId);
     return ok({ coins });
+  } catch (err) {
+    const code = dbErrorCode(err);
+    if (code) return fail(409, code);
+    throw err;
+  }
+}
+
+// --- claim-referral -----------------------------------------------------------
+
+const REFERRAL_CODE = /^[A-Za-z0-9]{4,12}$/;
+
+/**
+ * Canjea el código de referido del jugador recién registrado (bono de
+ * bienvenida). El código llega en el cuerpo (link /r/CODIGO guardado en el
+ * dispositivo) o, si no, se toma de los metadatos guardados al registrarse.
+ * Todas las reglas se comprueban aquí y en SQL, nunca en el cliente:
+ * correo verificado, un solo bono por cuenta, ventana de tiempo, sin
+ * autorreferidos ni referidos cruzados.
+ */
+export async function handleClaimReferral(db: Db, userId: string, body: unknown): Promise<HandlerResult> {
+  const b = (body ?? {}) as { code?: unknown };
+  const authUser = await db.getAuthUser(userId);
+  if (!authUser) return fail(404, 'USER_NOT_FOUND');
+
+  const raw = typeof b.code === 'string' && b.code ? b.code : authUser.referralCode;
+  if (!raw) return fail(400, 'NO_CODE');
+  if (!REFERRAL_CODE.test(raw)) return fail(400, 'INVALID_CODE');
+
+  const cfg = await db.getConfig<ReferralConfig>('referral');
+  if (cfg.requireEmailVerified && !authUser.emailVerified) return fail(403, 'EMAIL_NOT_VERIFIED');
+
+  try {
+    const coins = await db.claimReferral(userId, raw.toUpperCase());
+    return ok({ coins, bonus: cfg.welcomeBonus });
   } catch (err) {
     const code = dbErrorCode(err);
     if (code) return fail(409, code);

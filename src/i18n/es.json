@@ -161,5 +161,21 @@
   "gameover.guest": "Como invitado tus monedas no se guardan.",
   "gameover.createAccount": "Crear cuenta",
   "toast.notTracked": "⚠️ Sin conexión: esta partida no se guardará",
-  "toast.welcome": "👋 ¡Hola, {name}!"
+  "toast.welcome": "👋 ¡Hola, {name}!",
+  "invite.title": "Invitar amigos",
+  "invite.pitch": "Tu amigo recibe <b>{welcome} monedas</b> al registrarse con tu link, y tú <b>{inviter} monedas</b> cuando termine su primera partida.",
+  "invite.yourLink": "Tu link de invitación",
+  "invite.copy": "Copiar",
+  "invite.copied": "✅ Link copiado",
+  "invite.whatsapp": "Enviar por WhatsApp",
+  "invite.share": "Compartir…",
+  "invite.invited": "Amigos registrados",
+  "invite.played": "Ya jugaron",
+  "invite.earned": "Monedas ganadas",
+  "invite.message": "🦖 ¡Juega dinoMau conmigo! Regístrate con mi link y recibe {welcome} monedas de regalo: {link}",
+  "invite.guest": "Crea una cuenta para conseguir tu link de invitación.",
+  "invite.offline": "Los referidos necesitan conexión con el servidor.",
+  "toast.referralBonus": "🎁 ¡+{value} monedas de bienvenida por usar un link de amigo!",
+  "toast.referralPending": "📧 Confirma tu correo para recibir el bono de bienvenida.",
+  "auth.whyReferral": "🎁 ¡Un amigo te invitó! Crea tu cuenta y recibe {value} monedas de regalo."
 }

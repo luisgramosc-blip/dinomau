@@ -7,7 +7,7 @@ Endless runner 3D ambientado en la era jurásica. Corre por la selva, esquiva tr
 - **Backend:** Supabase (Auth, Postgres con RLS, Edge Functions)
 - **Despliegue:** Vercel (frontend) + Supabase (backend)
 
-> Estado: **Fase 5 completada**. Ya funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas y el ranking global y semanal.
+> Estado: **Fase 6 completada**. Ya funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, y los referidos con bonos.
 >
 > **Dos modos.** Con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` definidas, todo va al servidor. Sin ellas el juego funciona entero en *modo local* (monedero en el dispositivo), útil para desarrollar sin backend.
 
@@ -223,7 +223,7 @@ dinoMau/
 │       ├── start-run/                # Abre una partida y devuelve la semilla
 │       ├── finish-run/               # Valida plausibilidad, aplica batallas, acredita monedas
 │       ├── purchase-dino/            # Compra con verificación de saldo
-│       └── claim-referral/           # (Fase 6) Bono de bienvenida (email verificado, una sola vez)
+│       └── claim-referral/           # Bono de bienvenida (email verificado, una sola vez)
 │
 └── tests/
     ├── unit/                      # Vitest: pool, carriles, resolver de batalla, validación
@@ -376,6 +376,19 @@ Para probar en el móvil dentro de la misma red: `npm run dev -- --host` y abre 
 | Compras | Edge Function `purchase-dino` | Saldo y precio comprobados en una transacción. Cada movimiento queda en `coin_ledger`. |
 | Ranking | `get_leaderboard('all' \| 'weekly')`, `get_my_rank` | Solo expone nombre, dino y puntaje. |
 
+### Referidos (Fase 6)
+
+1. **Tu link:** cada jugador tiene un código único y un link `https://<dominio>/r/CODIGO`, que está en *Invitar amigos*. Desde ahí se puede copiar, mandar por WhatsApp o compartir con el menú nativo del móvil. La pantalla muestra cuántos amigos se registraron, cuántos jugaron y cuántas monedas te dieron.
+2. **Tu amigo abre el link:** el código se guarda en su dispositivo y el juego abre el registro con el mensaje "Un amigo te invitó…". Si se registra con correo, el código también viaja en los metadatos de la cuenta, para que funcione aunque confirme el correo desde otro dispositivo.
+3. **Bono de bienvenida (500):** al iniciar sesión, la Edge Function `claim-referral` lo concede si se cumplen todas las condiciones:
+   - el correo está verificado (con Google cuenta como verificado);
+   - es el primer bono de esa cuenta;
+   - no han pasado más de 72 h desde el registro;
+   - no es su propio código ni un referido cruzado (A invita a B y B invita a A).
+4. **Bono del invitador (250):** se concede cuando el amigo termina su **primera partida válida**; una partida rechazada por trampa no cuenta. Hay un tope de 20 bonos de invitador al día para frenar granjas de cuentas falsas.
+
+Todo se valida en el servidor (Edge Function + SQL). Los valores están en `game_config.referral` y se reflejan para la interfaz en `src/config/referral.config.ts`.
+
 La lógica de las Edge Functions vive en `supabase/functions/_shared/handlers.ts` y `validation.ts`, sin dependencias de Deno, así se prueba con Vitest:
 - `tests/unit/Validation.test.ts`: reglas antitrampas.
 - `tests/integration/server.test.ts`: flujos completos contra Postgres real con las migraciones aplicadas.
@@ -395,6 +408,7 @@ supabase db push                                  # aplica migraciones
 supabase functions deploy start-run
 supabase functions deploy finish-run
 supabase functions deploy purchase-dino
+supabase functions deploy claim-referral
 ```
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` se inyectan solas en las Edge Functions. No hace falta definirlas como secretos.
@@ -449,6 +463,6 @@ Desde el primer día el juego funciona con mallas generadas por código (`src/as
 | 3 | Tienda 3D y sistema de dinosaurios y habilidades | ✅ |
 | 4 | Sistema de batallas (QTE) | ✅ |
 | 5 | Supabase: cuentas, guardado en servidor, ranking | ✅ |
-| 6 | Referidos y bonos | ⏳ |
-| 7 | Imagen para historias y compartir | |
+| 6 | Referidos y bonos | ✅ |
+| 7 | Imagen para historias y compartir | ⏳ |
 | 8 | PWA, optimización y pruebas en móvil | |

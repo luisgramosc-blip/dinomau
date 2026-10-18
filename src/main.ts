@@ -1,5 +1,6 @@
 import './ui/styles/main.css';
 import { DINOS, getDino } from './config/dinos.config';
+import { PENDING_REFERRAL_KEY } from './config/referral.config';
 import { AssetLoader } from './assets/AssetLoader';
 import { BattleScene } from './battle/BattleScene';
 import { selectRival } from './battle/BattleRules';
@@ -14,6 +15,7 @@ import { RunnerScene } from './runner/RunnerScene';
 import { AuthService } from './services/AuthService';
 import { LocalEconomyService, type EconomyService } from './services/EconomyService';
 import { LeaderboardService } from './services/LeaderboardService';
+import { ReferralService } from './services/ReferralService';
 import { RunService } from './services/RunService';
 import { SupabaseEconomyService } from './services/SupabaseEconomyService';
 import { supabase } from './services/supabaseClient';
@@ -30,11 +32,19 @@ function captureReferralLink(): void {
   const match = window.location.pathname.match(/^\/r\/([A-Za-z0-9]{4,12})\/?$/);
   if (!match) return;
   try {
-    localStorage.setItem('dinomau:ref', match[1].toUpperCase());
+    localStorage.setItem(PENDING_REFERRAL_KEY, match[1].toUpperCase());
   } catch {
     /* sin almacenamiento */
   }
   window.history.replaceState(null, '', '/');
+}
+
+function hasPendingReferral(): boolean {
+  try {
+    return !!localStorage.getItem(PENDING_REFERRAL_KEY);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -60,6 +70,7 @@ async function bootstrap(): Promise<void> {
   const auth = supabase ? new AuthService(supabase) : null;
   const serverEconomy = supabase && auth ? new SupabaseEconomyService(supabase, auth) : null;
   const leaderboard = supabase ? new LeaderboardService(supabase) : null;
+  const referrals = supabase && auth ? new ReferralService(supabase, auth) : null;
   const economy: EconomyService = serverEconomy ?? new LocalEconomyService();
   const runs = new RunService(auth);
   if (auth && serverEconomy) {
@@ -105,7 +116,7 @@ async function bootstrap(): Promise<void> {
     }
   };
 
-  const ui = new UIManager(uiRoot, economy, { auth, serverEconomy, leaderboard }, {
+  const ui = new UIManager(uiRoot, economy, { auth, serverEconomy, leaderboard, referrals }, {
     onPlay: () => void startRun(),
     onPauseToggle: () => runner.togglePause(),
     onRetry: () => void startRun(),
@@ -199,15 +210,31 @@ async function bootstrap(): Promise<void> {
     ui.gameOverResult(result);
   });
 
-  // Iniciar / cerrar sesión: recargar monedero y dino equipado
+  /** Canjea el bono de bienvenida si el jugador llegó por un link de amigo. */
+  const claimReferral = async () => {
+    const outcome = await referrals?.claimPending();
+    if (outcome?.status === 'granted') {
+      economy.setCoins(outcome.coins);
+      ui.toast.show(t('toast.referralBonus', { value: outcome.bonus }), 3500);
+      audio.sfx('powerup');
+    } else if (outcome?.status === 'retry-later' && outcome.reason === 'EMAIL_NOT_VERIFIED') {
+      ui.toast.show(t('toast.referralPending'), 3500);
+    }
+  };
+
+  // Iniciar / cerrar sesión: recargar monedero, dino equipado y bono de referido
   auth?.onChange(async (user) => {
     await serverEconomy?.refresh();
     if (user) {
       const name = serverEconomy?.profile?.username;
       if (name) ui.toast.show(t('toast.welcome', { name }));
       ui.promptUsernameIfMissing();
+      await claimReferral();
     }
   });
+  if (auth?.user) void claimReferral();
+  // Llegó por un link de amigo sin cuenta: mostrar la invitación de entrada
+  else if (auth && hasPendingReferral()) ui.openAuth('referral', 'signup');
 
   // Audio: los navegadores solo permiten sonar tras un gesto del usuario
   audio.bindGameEvents();

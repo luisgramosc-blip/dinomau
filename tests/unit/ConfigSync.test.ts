@@ -3,6 +3,7 @@ import { BATTLE_CONFIG } from '@/config/battle.config';
 import { DINOS } from '@/config/dinos.config';
 import { GAME_CONFIG } from '@/config/game.config';
 import { ABILITY_CONFIG, STAT_EFFECTS } from '@/config/dinos.config';
+import { REFERRAL_CONFIG } from '@/config/referral.config';
 import { readServerConfig, readServerDinoPrices } from './serverConfig';
 
 /**
@@ -20,6 +21,13 @@ describe('configuración cliente ↔ servidor', () => {
     const server = readServerConfig<Record<string, unknown>>('battle');
     for (const k of ['coinThreshold', 'winMultiplier', 'lossPenalty', 'multiplyTarget', 'maxGainPerBattle'] as const) {
       expect(server[k], k).toBe(BATTLE_CONFIG[k]);
+    }
+  });
+
+  it('bonos de referidos', () => {
+    const server = readServerConfig<Record<string, unknown>>('referral');
+    for (const k of ['welcomeBonus', 'inviterBonus', 'inviterBonusEnabled', 'claimWindowHours'] as const) {
+      expect(server[k], k).toBe(REFERRAL_CONFIG[k]);
     }
   });
 

@@ -161,5 +161,21 @@
   "gameover.guest": "As a guest your coins are not saved.",
   "gameover.createAccount": "Create account",
   "toast.notTracked": "⚠️ No connection: this run won't be saved",
-  "toast.welcome": "👋 Hi, {name}!"
+  "toast.welcome": "👋 Hi, {name}!",
+  "invite.title": "Invite friends",
+  "invite.pitch": "Your friend gets <b>{welcome} coins</b> when signing up with your link, and you get <b>{inviter} coins</b> when they finish their first run.",
+  "invite.yourLink": "Your invite link",
+  "invite.copy": "Copy",
+  "invite.copied": "✅ Link copied",
+  "invite.whatsapp": "Send via WhatsApp",
+  "invite.share": "Share…",
+  "invite.invited": "Friends signed up",
+  "invite.played": "Already played",
+  "invite.earned": "Coins earned",
+  "invite.message": "🦖 Play dinoMau with me! Sign up with my link and get {welcome} free coins: {link}",
+  "invite.guest": "Create an account to get your invite link.",
+  "invite.offline": "Referrals need a server connection.",
+  "toast.referralBonus": "🎁 +{value} welcome coins for using a friend's link!",
+  "toast.referralPending": "📧 Confirm your email to receive the welcome bonus.",
+  "auth.whyReferral": "🎁 A friend invited you! Create your account and get {value} free coins."
 }

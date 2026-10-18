@@ -4,16 +4,18 @@ import { t } from '@/i18n/i18n';
 import type { AuthService } from '@/services/AuthService';
 import type { EconomyService } from '@/services/EconomyService';
 import type { LeaderboardService } from '@/services/LeaderboardService';
+import type { ReferralService } from '@/services/ReferralService';
 import type { FinishResult } from '@/services/RunService';
 import type { SupabaseEconomyService } from '@/services/SupabaseEconomyService';
 import { LocalStore } from '@/storage/LocalStore';
 import { Toast } from './components/Toast';
 import { hide, show, stopSwipe } from './dom';
-import { AuthScreen } from './screens/AuthScreen';
+import { AuthScreen, type AuthReason } from './screens/AuthScreen';
 import { BattleScreen } from './screens/BattleScreen';
 import { Countdown } from './screens/Countdown';
 import { GameOverScreen } from './screens/GameOverScreen';
 import { Hud } from './screens/Hud';
+import { InviteScreen } from './screens/InviteScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { MainMenuScreen } from './screens/MainMenuScreen';
 import { PauseScreen } from './screens/PauseScreen';
@@ -44,6 +46,7 @@ export interface BackendServices {
   auth: AuthService | null;
   serverEconomy: SupabaseEconomyService | null;
   leaderboard: LeaderboardService | null;
+  referrals: ReferralService | null;
 }
 
 export class UIManager {
@@ -56,6 +59,7 @@ export class UIManager {
   private readonly settings: SettingsScreen;
   private readonly gameOver: GameOverScreen;
   private readonly ranking: LeaderboardScreen;
+  private readonly invite: InviteScreen;
   private readonly authScreen?: AuthScreen;
   private readonly profile?: ProfileScreen;
 
@@ -66,13 +70,13 @@ export class UIManager {
     actions: UIActions,
   ) {
     root.innerHTML = '';
-    const { auth, serverEconomy, leaderboard } = backend;
+    const { auth, serverEconomy, leaderboard, referrals } = backend;
 
     this.menu = new MainMenuScreen({
       onPlay: actions.onPlay,
       onShop: actions.onOpenShop,
       onRanking: () => this.showRanking(),
-      onInvite: () => this.toast.show(`👥 ${t('menu.soon')}`),
+      onInvite: () => this.showInvite(),
       onSettings: () => this.settings.open(),
       onAccount: () => this.openAccount(),
     });
@@ -96,6 +100,12 @@ export class UIManager {
       () => ({ userId: auth?.user?.id ?? null, hasUsername: !!serverEconomy?.profile?.username }),
       () => this.showMenu(),
     );
+    this.invite = new InviteScreen(
+      referrals,
+      () => serverEconomy?.profile?.referralCode ?? null,
+      (text) => this.toast.show(text),
+      () => this.showMenu(),
+    );
     if (auth && serverEconomy) {
       this.authScreen = new AuthScreen(auth);
       this.profile = new ProfileScreen(auth, serverEconomy, () => {
@@ -106,7 +116,7 @@ export class UIManager {
 
     const countdown = new Countdown();
     root.append(
-      this.menu.el, this.shop.el, this.ranking.el, this.hud.el, this.battle.el, countdown.el,
+      this.menu.el, this.shop.el, this.ranking.el, this.invite.el, this.hud.el, this.battle.el, countdown.el,
       this.pause.el, this.gameOver.el, this.settings.el,
       ...(this.authScreen ? [this.authScreen.el] : []),
       ...(this.profile ? [this.profile.el] : []),
@@ -177,7 +187,7 @@ export class UIManager {
   }
 
   /** Pide iniciar sesión explicando el motivo. */
-  openAuth(reason: 'default' | 'buy' | 'save' = 'default', mode: 'login' | 'signup' = 'login'): void {
+  openAuth(reason: AuthReason = 'default', mode: 'login' | 'signup' = 'login'): void {
     this.authScreen?.open(reason, mode);
   }
 
@@ -227,6 +237,7 @@ export class UIManager {
     hide(this.hud.el, this.pause.el, this.gameOver.el);
     this.shop.close();
     this.ranking.close();
+    this.invite.close();
     this.refreshMenu();
     show(this.menu.el);
   }
@@ -234,6 +245,16 @@ export class UIManager {
   showShop(): void {
     hide(this.menu.el, this.gameOver.el);
     this.shop.open(this.economy.snapshot);
+  }
+
+  /** Invitar amigos; como invitado primero pide crear cuenta. */
+  showInvite(): void {
+    if (this.backend.auth && !this.backend.auth.user) {
+      this.openAuth('default', 'signup');
+      return;
+    }
+    hide(this.menu.el);
+    this.invite.open();
   }
 
   showRanking(): void {

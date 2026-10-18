@@ -1,8 +1,10 @@
-import { t, type TranslationKey } from '@/i18n/i18n';
+import { PENDING_REFERRAL_KEY, REFERRAL_CONFIG } from '@/config/referral.config';
+import { formatNumber, t, type TranslationKey } from '@/i18n/i18n';
 import type { AuthResult, AuthService } from '@/services/AuthService';
 import { $, hide, html, show } from '../dom';
 
 type Mode = 'login' | 'signup';
+export type AuthReason = 'default' | 'buy' | 'save' | 'referral';
 
 /**
  * Entrar / crear cuenta: email + contraseña, Google, recuperar contraseña y
@@ -54,9 +56,10 @@ export class AuthScreen {
     auth.onChange((user) => user && this.close());
   }
 
-  open(reason: 'default' | 'buy' | 'save' = 'default', mode: Mode = 'login'): void {
-    const key: TranslationKey = reason === 'buy' ? 'auth.whyBuy' : reason === 'save' ? 'auth.whySave' : 'auth.why';
-    $(this.el, '[data-ref="reason"]').textContent = t(key);
+  open(reason: AuthReason = 'default', mode: Mode = 'login'): void {
+    const key: TranslationKey =
+      reason === 'buy' ? 'auth.whyBuy' : reason === 'save' ? 'auth.whySave' : reason === 'referral' ? 'auth.whyReferral' : 'auth.why';
+    $(this.el, '[data-ref="reason"]').textContent = t(key, { value: formatNumber(REFERRAL_CONFIG.welcomeBonus) });
     this.message('');
     this.setMode(mode);
     show(this.el);
@@ -148,7 +151,7 @@ export class AuthScreen {
 /** Código de referido guardado al abrir un link /r/CODIGO (Fase 6). */
 function pendingReferralCode(): string | null {
   try {
-    return localStorage.getItem('dinomau:ref');
+    return localStorage.getItem(PENDING_REFERRAL_KEY);
   } catch {
     return null;
   }
