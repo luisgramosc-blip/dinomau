@@ -7,7 +7,7 @@ Endless runner 3D ambientado en la era jurásica. Corre por la selva, esquiva tr
 - **Backend:** Supabase (Auth, Postgres con RLS, Edge Functions)
 - **Despliegue:** Vercel (frontend) + Supabase (backend)
 
-> Estado: **Fase 6 completada**. Ya funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, y los referidos con bonos.
+> Estado: **Fase 7 completada**. Ya funcionan el runner, la tienda, las batallas, las cuentas (email y Google), el monedero en el servidor con validación de partidas, el ranking global y semanal, los referidos con bonos, y la imagen para historias con botones para compartir.
 >
 > **Dos modos.** Con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` definidas, todo va al servidor. Sin ellas el juego funciona entero en *modo local* (monedero en el dispositivo), útil para desarrollar sin backend.
 
@@ -389,6 +389,13 @@ Para probar en el móvil dentro de la misma red: `npm run dev -- --host` y abre 
 
 Todo se valida en el servidor (Edge Function + SQL). Los valores están en `game_config.referral` y se reflejan para la interfaz en `src/config/referral.config.ts`.
 
+### Compartir en redes (Fase 7)
+
+- **Imagen para historias:** al pulsar *Compartir* en el fin de partida se genera una imagen vertical de 1080×1920 (`src/share/StoryImage.ts`). Lleva el logo, el retrato 3D del dino equipado (`DinoPortrait.ts`), el puntaje, las monedas, la distancia y "¡Nuevo récord!" cuando toca. Al pie va el link de referido si hay cuenta, o la web del juego si eres invitado.
+- **Compartir imagen:** usa la Web Share API con el archivo, así en el móvil se abre el menú nativo para elegir WhatsApp (Estados), Instagram (Stories), Facebook, etc. Si el navegador no puede compartir archivos, descarga la imagen y copia el texto con el link.
+- **Botones directos:** WhatsApp (`wa.me` con texto y link), Facebook (`sharer.php` con el link) y X (`x.com/intent/post`). Estas redes no aceptan adjuntar la imagen por URL, así que llevan solo texto y link.
+- La imagen se dibuja con formas en Canvas, sin imágenes externas ni emojis dentro del canvas (no todos los móviles tienen fuente de emojis), así funciona también sin conexión.
+
 La lógica de las Edge Functions vive en `supabase/functions/_shared/handlers.ts` y `validation.ts`, sin dependencias de Deno, así se prueba con Vitest:
 - `tests/unit/Validation.test.ts`: reglas antitrampas.
 - `tests/integration/server.test.ts`: flujos completos contra Postgres real con las migraciones aplicadas.
@@ -464,5 +471,5 @@ Desde el primer día el juego funciona con mallas generadas por código (`src/as
 | 4 | Sistema de batallas (QTE) | ✅ |
 | 5 | Supabase: cuentas, guardado en servidor, ranking | ✅ |
 | 6 | Referidos y bonos | ✅ |
-| 7 | Imagen para historias y compartir | ⏳ |
-| 8 | PWA, optimización y pruebas en móvil | |
+| 7 | Imagen para historias y compartir | ✅ |
+| 8 | PWA, optimización y pruebas en móvil | ⏳ |

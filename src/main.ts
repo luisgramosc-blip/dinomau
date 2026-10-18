@@ -16,6 +16,7 @@ import { AuthService } from './services/AuthService';
 import { LocalEconomyService, type EconomyService } from './services/EconomyService';
 import { LeaderboardService } from './services/LeaderboardService';
 import { ReferralService } from './services/ReferralService';
+import { SITE_URL } from './services/supabaseClient';
 import { RunService } from './services/RunService';
 import { SupabaseEconomyService } from './services/SupabaseEconomyService';
 import { supabase } from './services/supabaseClient';
@@ -116,6 +117,12 @@ async function bootstrap(): Promise<void> {
     }
   };
 
+  /** Link para compartir: el de referido si hay cuenta con código, si no la web del juego. */
+  const shareLink = () => {
+    const code = auth?.user ? serverEconomy?.profile?.referralCode : null;
+    return code ? { url: ReferralService.linkFor(code), isReferral: true } : { url: SITE_URL, isReferral: false };
+  };
+
   const ui = new UIManager(uiRoot, economy, { auth, serverEconomy, leaderboard, referrals }, {
     onPlay: () => void startRun(),
     onPauseToggle: () => runner.togglePause(),
@@ -158,7 +165,7 @@ async function bootstrap(): Promise<void> {
       if (result.ok) ui.toast.show(`✅ ${t('shop.equippedToast', { name: dino.name })}`);
       else if (result.error === 'AUTH_REQUIRED') ui.openAuth('buy');
     },
-  });
+  }, { assets, getLink: shareLink });
 
   // Batallas: el runner avisa al llegar al umbral de monedas
   events.on('battle:trigger', ({ runCoins, sequence, atMs }) => {
@@ -249,7 +256,7 @@ async function bootstrap(): Promise<void> {
   });
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'Enter' && e.code !== 'Space') return;
-    if ((e.target as HTMLElement | null)?.closest('input, form')) return;
+    if ((e.target as HTMLElement | null)?.closest('input, form') || ui.share.isOpen) return;
     if (runner.runState === 'ready' && ui.isMenuVisible) void startRun();
     else if (runner.runState === 'gameover' && ui.isGameOverVisible) void startRun();
   });

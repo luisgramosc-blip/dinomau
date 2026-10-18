@@ -22,6 +22,8 @@ import { PauseScreen } from './screens/PauseScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ShopScreen } from './screens/ShopScreen';
+import { ShareSheet, type ShareDeps, type ShareRun } from './screens/ShareSheet';
+import { getDino } from '@/config/dinos.config';
 
 /**
  * Monta las pantallas sobre el canvas y decide cuál se ve. Cada pantalla vive
@@ -60,6 +62,9 @@ export class UIManager {
   private readonly gameOver: GameOverScreen;
   private readonly ranking: LeaderboardScreen;
   private readonly invite: InviteScreen;
+  readonly share: ShareSheet;
+  /** Última partida, para la imagen de compartir. */
+  private lastRun?: ShareRun;
   private readonly authScreen?: AuthScreen;
   private readonly profile?: ProfileScreen;
 
@@ -68,6 +73,7 @@ export class UIManager {
     private readonly economy: EconomyService,
     private readonly backend: BackendServices,
     actions: UIActions,
+    shareDeps: Omit<ShareDeps, 'toast'>,
   ) {
     root.innerHTML = '';
     const { auth, serverEconomy, leaderboard, referrals } = backend;
@@ -93,7 +99,9 @@ export class UIManager {
       onRetry: actions.onRetry,
       onMenu: actions.onMenu,
       onCreateAccount: () => this.openAuth('save', 'signup'),
+      onShare: () => this.lastRun && void this.share.open(this.lastRun),
     });
+    this.share = new ShareSheet({ ...shareDeps, toast: (text, ms) => this.toast.show(text, ms) });
     this.battle = new BattleScreen(actions.onBattleContinue);
     this.ranking = new LeaderboardScreen(
       leaderboard,
@@ -117,7 +125,7 @@ export class UIManager {
     const countdown = new Countdown();
     root.append(
       this.menu.el, this.shop.el, this.ranking.el, this.invite.el, this.hud.el, this.battle.el, countdown.el,
-      this.pause.el, this.gameOver.el, this.settings.el,
+      this.pause.el, this.gameOver.el, this.share.el, this.settings.el,
       ...(this.authScreen ? [this.authScreen.el] : []),
       ...(this.profile ? [this.profile.el] : []),
       this.toast.el,
@@ -142,6 +150,7 @@ export class UIManager {
       const isRecord = score > previousBest;
       hide(this.hud.el);
       this.gameOver.fill({ score, distance, coins, bestScore: Math.max(previousBest, score), isRecord });
+      this.lastRun = { score, distance, coins, isRecord, dino: getDino(this.economy.snapshot.equipped) };
       show(this.gameOver.el);
     });
     events.on('wallet:changed', () => {
@@ -220,6 +229,7 @@ export class UIManager {
       this.gameOver.setEarned(result.awarded);
       this.gameOver.setSaveStatus(t('gameover.saved'), 'ok');
       if (result.newRecord) this.gameOver.setRecord(true, this.bestScore);
+      if (this.lastRun) this.lastRun = { ...this.lastRun, coins: result.awarded, isRecord: result.newRecord };
       this.backend.leaderboard?.invalidate();
     }
     this.gameOver.setBalance({ coins: result.coins });
@@ -235,6 +245,7 @@ export class UIManager {
   /** Vuelve al menú principal. */
   showMenu(): void {
     hide(this.hud.el, this.pause.el, this.gameOver.el);
+    this.share.close();
     this.shop.close();
     this.ranking.close();
     this.invite.close();

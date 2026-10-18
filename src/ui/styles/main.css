@@ -996,3 +996,30 @@ body.ready .splash { opacity: 0; pointer-events: none; }
 .btn--whatsapp { width: 100%; background: #25d366; color: #0b2e17; }
 .invite__stats { margin: 14px 0 0; }
 .invite__notice { margin: 0; font-weight: 800; color: var(--lava-light); }
+
+/* --- Compartir ----------------------------------------------------------------- */
+.btn--share { flex: 1; background: var(--lava-light); color: var(--ink); font-size: 18px; min-height: 46px; margin-top: 10px; }
+.share { display: flex; flex-direction: column; gap: 10px; max-height: calc(100dvh - 32px); overflow-y: auto; }
+.share h2 { margin-bottom: 0; }
+.share__preview {
+  align-self: center;
+  width: min(220px, 50vw);
+  aspect-ratio: 9 / 16;
+  border-radius: 14px;
+  border: 3px solid var(--ink);
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-height: 700px) { .share__preview { width: min(150px, 40vw); } }
+.share__preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.share__loading { margin: 0; padding: 12px; font-weight: 800; animation: pulse 1.2s ease-in-out infinite; }
+.share__hint { margin: -4px 0 0; font-size: 12px; opacity: 0.8; }
+.share__hint.hidden { display: none; }
+.share__row { display: flex; gap: 8px; }
+.share__row .btn { flex: 1; width: auto; padding: 10px 6px; font-size: 16px; min-height: 46px; margin: 0; }
+.btn--facebook { background: #1877f2; color: #fff; }
+.btn--x { background: #000; color: #fff; }
+.share .btn:disabled { opacity: 0.5; }

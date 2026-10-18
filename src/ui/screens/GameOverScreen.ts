@@ -13,14 +13,11 @@ export interface WalletSummary {
   coins: number;
 }
 
-/**
- * Fin de partida: puntaje, distancia, monedas, récord y acciones.
- * El botón "Compartir" queda oculto hasta la Fase 7 (imagen para historias).
- */
+/** Fin de partida: puntaje, distancia, monedas, récord, guardado y compartir. */
 export class GameOverScreen {
   readonly el: HTMLElement;
 
-  constructor(actions: { onRetry(): void; onMenu(): void; onCreateAccount(): void }) {
+  constructor(actions: { onRetry(): void; onMenu(): void; onCreateAccount(): void; onShare(): void }) {
     this.el = html(/* html */ `
       <section class="screen screen--modal hidden">
         <div class="card card--gameover">
@@ -38,7 +35,7 @@ export class GameOverScreen {
           <button class="btn btn--primary" data-action="retry">${t('gameover.retry')}</button>
           <div class="btn-row">
             <button class="btn btn--ghost" data-action="menu">${t('gameover.menu')}</button>
-            <button class="btn btn--ghost hidden" data-action="share">${t('gameover.share')}</button>
+            <button class="btn btn--share" data-action="share">📤 ${t('gameover.share')}</button>
           </div>
         </div>
       </section>
@@ -46,6 +43,7 @@ export class GameOverScreen {
     $(this.el, '[data-action="retry"]').addEventListener('click', actions.onRetry);
     $(this.el, '[data-action="menu"]').addEventListener('click', actions.onMenu);
     $(this.el, '[data-action="create-account"]').addEventListener('click', actions.onCreateAccount);
+    $(this.el, '[data-action="share"]').addEventListener('click', actions.onShare);
   }
 
   /** Estado del guardado en el servidor (texto vacío = ocultar). */
